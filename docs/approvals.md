@@ -123,3 +123,26 @@ No approval records exist for P4–P21. P4 is unblocked and is the next phase.
 | Linked requirements | REQ-014, 028, 040, 051, 072, 080–085, 100–105, NFR-004 |
 | Linked findings | Three test failures found and resolved during verification — see Comments |
 | Comments | Two of the three initial test failures were **the system working correctly**: the append-only triggers blocked the tamper attempt, which meant the hash chain itself was never being exercised. The test was rewritten to explicitly drop the triggers first — simulating an attacker who already has raw file access — because that is the only honest way to test defence two, and it is exactly the threat model ADR-0003 claims to address (tamper-*evident*, not tamper-*proof*). The third failure was a test asserting `throws` against an empty table, which would have passed for the wrong reason; it was replaced with a schema-level assertion. A separate correction was recorded in ADR-0005 after the pinned `better-sqlite3` range turned out to have no prebuild for Node 22 — the original probe had not pinned a version, so it verified something different from what was depended on. |
+
+---
+
+## APR-P5-001
+
+| Field | Value |
+|---|---|
+| Phase | P5 — Deterministic Core |
+| Phase version | 1.0 |
+| Approver role | Optimization / Operations Research Engineer (primary) |
+| Supporting review | Backend Engineer, QA Engineer, Domain Expert (condition owner) |
+| Date/time | 2026-09-07 (UTC) |
+| Decision | **APPROVED** |
+| Acceptance criteria reviewed | "Impact and alternatives can be calculated without an LLM" — satisfied; no module under `src/core/` imports an agent or model provider, and all 54 tests run offline |
+| Evidence reviewed | `docs/P5-deterministic-core.md`; six core modules; flagship run producing FEASIBLE/INFEASIBLE/BLOCKED/baseline in one pass; **54/54 tests passing**; measured pipeline latency well under the NFR-001 2 s budget |
+| Conditions closed | **DE-1** — cold-chain excursion is a hard gate returning INFEASIBLE, excluded from ranking, reason states "not rankable at any cost". **DE-2** — unqualified supplier returns BLOCKED with "cannot be approved by any role"; BLOCKED dominates INFEASIBLE. |
+| Outstanding issues | MCDA and risk weights are ASSUMED organisational values (declared, configurable, visible); hospital-to-warehouse sourcing is inferred from the first inbound lane, adequate for the flagship topology only |
+| Risk assessment | Acceptable. The load-bearing risk was that gates would degrade into weighted cost terms under demo pressure; a test now proves a cheap infeasible option cannot outrank a costly feasible one. |
+| Linked artefacts | `src/core/{network,inventory,constraints,scoring,impact,scenarios}.mjs`, `docs/P5-deterministic-core.md` |
+| Linked tests | `tests/core.test.mjs` (28), plus P4 suite (26) |
+| Linked requirements | REQ-010–015, 020–028, NFR-001, NFR-003, NFR-004, NFR-008 |
+| Linked findings | D5-1 (HIGH), D5-2, D5-3, D5-4 — all fixed and regression-tested |
+| Comments | Four defects were found by the phase's own tests, and three were substantive rather than cosmetic. D5-1 is the most serious: the seed data could not exercise shelf-life netting, so REQ-012 had been passing against data that made the Domain Expert's binding P1 challenge unobservable — the requirement was verified in name only. D5-3 is the kind of scoring defect that survives to a live demo: the baseline was scoring 40/100 because "do nothing" was credited with zero cost and zero ETA. Both were caught only because the tests asserted on *outcomes the domain requires* rather than on function return shapes. |

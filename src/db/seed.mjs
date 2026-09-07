@@ -134,7 +134,11 @@ export function seedDatabase(db, { seed = 20260907 } = {}) {
   const lots = [
     // id, product, facility, qty, expiry offset days
     ['LOT-C-001', 'PRD-VAX-01', 'WH-CENTRAL', 4200, 90],
-    ['LOT-C-002', 'PRD-VAX-01', 'WH-CENTRAL', 5000, 6], // expires inside the horizon
+    // Short-dated bulk lot: 20,000 units but only 3 days of shelf life left. At 1,400 units/day
+    // only 4,200 units can ever be consumed — the remaining 15,800 are NOT cover. Raw stock says
+    // this site is comfortable; shelf-life netting (REQ-012) says it is not. This is the Domain
+    // Expert's P1 Challenge 3 made concrete, and it must change the answer or REQ-012 is untested.
+    ['LOT-C-002', 'PRD-VAX-01', 'WH-CENTRAL', 20000, 3],
     ['LOT-C-003', 'PRD-BIO-02', 'WH-CENTRAL', 3000, 120],
     ['LOT-N-001', 'PRD-VAX-01', 'WH-NORTH', 15000, 150], // the surplus that enables rebalancing
     ['LOT-N-002', 'PRD-BIO-02', 'WH-NORTH', 6000, 140],

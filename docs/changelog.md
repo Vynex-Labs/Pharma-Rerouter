@@ -96,3 +96,41 @@ SAP-2 (P18) · CA-2 (P6).
 
 ### Traceability
 16 requirements moved off PENDING; 13 now VERIFIED with passing tests.
+
+---
+
+## [0.3.0] — 2026-09-07 — Phase P5: Deterministic Core
+
+### Added
+- `src/core/network.mjs` — graph build, Dijkstra routing (deterministic tie-breaks), path
+  summarisation with **cumulative** excursion, downstream blast-radius traversal.
+- `src/core/inventory.mjs` — usable quantity with shelf-life netting, days-of-cover with cover
+  bands, orders-at-risk resolution.
+- `src/core/constraints.mjs` — cold-chain gate (DE-1), supplier qualification gate (DE-2),
+  capacity and lead-time gates; BLOCKED dominates INFEASIBLE.
+- `src/core/scoring.mjs` — transport cost, decomposed risk score, weighted-sum MCDA with visible
+  configurable weights and per-criterion score breakdown.
+- `src/core/impact.mjs` — blast radius, cover deltas against an undisrupted counterfactual,
+  do-nothing baseline; never mutates the frozen snapshot.
+- `src/core/scenarios.mjs` — five strategies plus `strategyIntents` hook for CA-2.
+- `docs/P5-deterministic-core.md`; 28 new tests (**54/54 passing**).
+
+### Conditions closed
+**DE-1** (cold-chain feasibility is a gate) · **DE-2** (supplier qualification BLOCKS).
+
+### Defects found and fixed during verification
+- **D5-1 (HIGH):** shelf-life netting did not actually bite — the seed lot was too small to produce
+  a write-off, so REQ-012 was passing against data that could not exercise it. Lot re-specified to
+  20,000 units at 3 days; write-off is now 15,800 units and the Domain Expert's P1 Challenge 3 is
+  genuinely demonstrated.
+- **D5-2:** inventory rebalancing only searched direct lanes and silently vanished when the surplus
+  was more than one hop away; replaced with a cold-chain-constrained route search over ranked donors.
+- **D5-3:** DO_NOTHING scored 40/100 because `etaHours = 0` earned full marks on speed and cost.
+  Baseline ETA is now outage duration + transit (624 h); it collapses to 15 and ranks last, with a
+  regression test asserting every corrective action outscores inaction.
+- **D5-4 (test defect):** a test asserted the fastest path used the 480 h sea lane when the router
+  correctly chose the 36 h air lane; corrected and extended to cover exclusion and CLOSED lanes.
+
+### Flagship result
+`AIR_REROUTE 81` · `INVENTORY_REBALANCE 80` · `DO_NOTHING 15` ·
+`ALT_PORT INFEASIBLE (14 h > 12 h excursion)` · `ALT_SUPPLIER BLOCKED (unqualified for EU)`.

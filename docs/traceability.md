@@ -19,21 +19,21 @@ A requirement may not be marked satisfied until all four downstream columns are 
 | REQ-003 | ADR-0002 §1 field-level authority | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-004 | ADR-0002 §4; ADR-0003 §2 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-005 | ADR-0002 §6 failure ladder | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-010 | arch §7 Deterministic Core | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-011 | arch §7; P1 §8 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-012 | P1 §13 Challenge 3 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-013 | P1 §4 journey | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-014 | AR-1; NFR-004 | snapshot replay | `tests/seed.test.mjs` NFR-004 | pass | PARTIAL (P5) |
+| REQ-010 | arch §7 Deterministic Core | `src/core/network.mjs`, `impact.mjs` | `tests/core.test.mjs` REQ-010 | pass | VERIFIED |
+| REQ-011 | arch §7; P1 §8 | `src/core/inventory.mjs` | `tests/core.test.mjs` REQ-011 | pass | VERIFIED |
+| REQ-012 | P1 §13 Challenge 3 | `inventory.mjs` usableQuantity | `tests/core.test.mjs` REQ-012 ×2 | write-off 15,800 units at WH-CENTRAL | VERIFIED |
+| REQ-013 | P1 §4 journey | `impact.mjs` baseline; `scenarios.mjs` buildDoNothing | `tests/core.test.mjs` REQ-013 ×2 | baseline ranks last | VERIFIED |
+| REQ-014 | AR-1; NFR-004 | pure functions over frozen snapshot | `tests/core.test.mjs` REQ-014 | identical across runs | VERIFIED |
 | REQ-015 | ADR-0002 §1; seam S2 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-020 | arch §7 scenario engine | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-021 | AR-1 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-022 | Condition DE-1 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-023 | Condition DE-2; ADR-0003 §2 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-024 | P1 §4 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-025 | arch §7 MCDA ranker | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-026 | Condition CA-2; ADR-0002 tool matrix | PENDING | PENDING | PENDING | DESIGNED |
+| REQ-020 | arch §7 scenario engine | `src/core/scenarios.mjs` | `tests/core.test.mjs` REQ-020 | 5 scenarios | VERIFIED |
+| REQ-021 | AR-1 | `scoring.mjs` cost + risk | `tests/core.test.mjs` risk scoring | pass | VERIFIED |
+| REQ-022 | Condition DE-1 | `constraints.mjs` checkColdChain | `tests/core.test.mjs` DE-1 ×3 | ALT_PORT INFEASIBLE 14h>12h | VERIFIED |
+| REQ-023 | Condition DE-2; ADR-0003 §2 | `constraints.mjs` checkSupplierQualification | `tests/core.test.mjs` DE-2 ×3 | ALT_SUPPLIER BLOCKED (EU) | VERIFIED |
+| REQ-024 | P1 §4 | `scoring.mjs` rankScenarios excluded[] | `tests/core.test.mjs` REQ-024 | reason mandatory | VERIFIED |
+| REQ-025 | arch §7 MCDA ranker | `scoring.mjs` DEFAULT_MCDA_WEIGHTS | `tests/core.test.mjs` REQ-025 | weights visible + breakdown | VERIFIED |
+| REQ-026 | Condition CA-2; ADR-0002 tool matrix | `scenarios.mjs` strategyIntents | `tests/core.test.mjs` CA-2 ×2 | intents change output set | PARTIAL (agent at P6) |
 | REQ-027 | ADR-0002 §1 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-028 | `input_snapshot` FK from `scenario` | `src/core/snapshot.mjs` | `tests/seed.test.mjs` DA-2 | 26/26 pass | VERIFIED |
+| REQ-028 | `input_snapshot` FK from `scenario` | `src/core/snapshot.mjs` | `tests/seed.test.mjs` DA-2 | pass | VERIFIED |
 | REQ-030 | ADR-0003 §1 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-031 | ADR-0001 seam S4 (no agent) | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-032 | ADR-0003 §2 | PENDING | PENDING | PENDING | DESIGNED |
@@ -94,14 +94,14 @@ A requirement may not be marked satisfied until all four downstream columns are 
 
 | Req | Design artefact | Impl | Test | Evidence | Status |
 |---|---|---|---|---|---|
-| NFR-001 | arch §7 | PENDING | PENDING | PENDING | DESIGNED |
+| NFR-001 | arch §7 | core pipeline | `tests/core.test.mjs` NFR-001 | < 2 s measured | VERIFIED |
 | NFR-002 | P1 §4 | PENDING | PENDING | PENDING | DESIGNED |
-| NFR-003 | ADR-0002 §6; F-1 | PENDING | PENDING | PENDING | DESIGNED |
+| NFR-003 | ADR-0002 §6; F-1 | core has zero agent imports | whole `core.test.mjs` runs offline | 54/54 offline | PARTIAL (full at P6) |
 | NFR-004 | AR-1 | `src/db/seed.mjs` seeded PRNG | `tests/seed.test.mjs` | seed hash stable across runs | VERIFIED |
 | NFR-005 | ADR-0004 §6 | PENDING | PENDING | PENDING | DESIGNED |
 | NFR-006 | arch §7 | PENDING | PENDING | PENDING | DESIGNED |
 | NFR-007 | AR-2 | PENDING | PENDING | PENDING | DESIGNED |
-| NFR-008 | ADR-0001 layering | PENDING | PENDING | PENDING | DESIGNED |
+| NFR-008 | ADR-0001 layering | `src/core/*` imports nothing from agents | inspection + offline test run | pass | VERIFIED |
 | NFR-009 | P5 exit criterion | PENDING | PENDING | PENDING | DESIGNED |
 | NFR-010 | this document | N/A | N/A | this document | VERIFIED |
 | NFR-011 | P15 gate | PENDING | PENDING | PENDING | DESIGNED |
@@ -152,4 +152,5 @@ Confirms every AR from `architecture.md` §8 is testable (handoff obligation fro
 - All 10 P2 conditions have at least one requirement. All 8 failure modes covered.
 - **P4 update (2026-09-07):** 16 requirements moved off PENDING; 13 now VERIFIED with passing tests
   (26/26 in `npm test`). Conditions **DA-1** and **DA-2** are CLOSED.
-- Remaining requirements are owned by P5 (engines), P6 (agents), P7 (SAP), P8 (UI), P12 (governance).
+- **P5 update (2026-09-07):** 13 further requirements VERIFIED (54/54 tests). Conditions **DE-1** and **DE-2** CLOSED.
+- Remaining requirements are owned by P6 (agents), P7 (SAP), P8 (UI), P12 (governance).
