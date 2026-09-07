@@ -1,6 +1,6 @@
 {
   "name": "pharma-rerouter",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "description": "Agentic Pharmaceutical Supply-Chain Resilience Control Tower \u2014 SAP Hackfest 2026 Theme 1",
   "type": "module",

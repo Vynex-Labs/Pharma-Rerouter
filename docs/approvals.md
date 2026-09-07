@@ -303,3 +303,24 @@ is the input, not the determinism guarantee (ADR-0005).
 | Linked requirements | REQ-030…041, AR-R3 |
 | Linked findings | Evidence-check ordering defect; a test matching its own doc comment — both fixed |
 | Comments | The load-bearing evidence for this phase is a **refusal**, not a success: a run supplying two of three required approvals halts and executes nothing. A gate that has only ever been observed letting things through has not been tested. Two deliberate identity choices carry the design: Ravi holds `SUPPLY_CHAIN_MANAGER` but not `QUALITY_ASSURANCE`, so the person running the incident cannot self-certify a cold-chain reroute; Sofia holds two roles specifically to exercise REQ-036. The flagship's three-role requirement is not configuration — it is three independent rules firing on one action. |
+
+---
+
+## APR-P10-001 — Testing
+
+| | |
+|---|---|
+| Phase | P10 — Testing |
+| Decision | APPROVED |
+| Approver role | QA Engineer |
+| Reviewer | Master Orchestrator |
+| Date | 2026-09-07 |
+| Scope | HTTP layer tests, bounded-execution and rollback tests, determinism/reproducibility suite, schema-drift tests. |
+| Evidence | `npm test` 204/204 (was 167); coverage 97.52% lines / 87.55% branches (was 95.83 / 86.76); `execution.mjs` 78.6→96.8%; `server.mjs` 73.7→92.2%; `npm run eval` 17/17; demo SEALED with a valid chain. |
+| Outstanding issues | `assertSchemaCurrent` is a drift guard, **not** a migration system — a deployment retaining history would need versioned migrations. `pipeline.mjs` branch coverage remains ~54% (BLOCKED and stale-approval paths are exercised via `governance.test.mjs` rather than through `runPipeline`). Browser-level testing is still impossible in this sandbox (Playwright cannot install); UI verification remains jsdom-based. |
+| Risk assessment | Acceptable. The phase found one HIGH defect in the recommendation engine that three prior phases of green tests had missed. |
+| Linked artefacts | `tests/http.test.mjs`, `tests/execution.test.mjs`, `tests/determinism.test.mjs`, `src/core/constraints.mjs`, `src/core/scenarios.mjs`, `docs/P10-testing.md` |
+| Linked tests | 37 new tests across three suites |
+| Linked requirements | REQ-050…055, REQ-083, REQ-093, NFR-002, NFR-007, ADR-0005, D8-2 |
+| Linked findings | D10-1 (HIGH) — fixed |
+| Comments | The phase justified itself twice. First, coverage: an aggregate of 95.83% concealed that the **entire HTTP routing table had never been executed by a test** and that the rollback path — the code that decides whether a half-finished execution corrupts the database — was untested. Second, **D10-1**: with every lane closed the engine still ranked `AIR_REROUTE` first as FEASIBLE, because `buildReroute` resolved lanes directly from the snapshot while only `buildGraph` honoured `status='CLOSED'`. It would have recommended and executed a reroute onto a shut lane. `scenarios.mjs` had 100% line coverage the entire time — the tests only ever asked questions to which "open" was the right answer. **Coverage measures which lines ran, not which questions were asked.** |

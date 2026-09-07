@@ -88,6 +88,31 @@ export function checkSupplierQualification(supplierProduct, destinationMarket, s
   return { ok: true };
 }
 
+/**
+ * Lane availability gate.
+ *
+ * Defect D10-1: `buildReroute` and `buildAltPort` look their lanes up by ID directly from the
+ * snapshot rather than through `buildGraph`, which is the only place that honoured
+ * `status === 'CLOSED'`. With every lane in the network closed the engine still returned
+ * AIR_REROUTE as FEASIBLE and ranked it first — it would have recommended, costed and executed a
+ * reroute onto a shut lane. A closed lane is not a cheap lane; it is not a lane.
+ */
+export function checkLaneAvailability(path) {
+  const unavailable = (path.lanes ?? []).filter((l) => l.status && l.status !== 'OPEN');
+  if (unavailable.length > 0) {
+    return {
+      ok: false,
+      verdict: INFEASIBLE,
+      code: 'LANE_UNAVAILABLE',
+      reason:
+        `Route uses ${unavailable.length} unavailable lane(s): ` +
+        `${unavailable.map((l) => `${l.id} (${l.status})`).join(', ')}.`,
+      detail: { laneIds: unavailable.map((l) => l.id) },
+    };
+  }
+  return { ok: true };
+}
+
 /** Capacity gate — a route that physically cannot carry the volume is infeasible. */
 export function checkCapacity(path, requiredUnits) {
   if (requiredUnits > path.minCapacityUnits) {

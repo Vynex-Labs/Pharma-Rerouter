@@ -11,7 +11,7 @@ SAP Hackfest 2026 · Theme 1: Resilient Supply Chains
 
 ## Current status
 
-**Phases P0–P9, P11, P12 complete. The full flow runs end to end. `npm test` → 167/167 passing.**
+**Phases P0–P12 complete. The full flow runs end to end. `npm test` → 204/204 passing.**
 
 | Phase | Status |
 |---|---|
@@ -27,7 +27,8 @@ SAP Hackfest 2026 · Theme 1: Resilient Supply Chains
 | P9 End-to-End Integration | PASSED |
 | P11 AI Evaluation | PASSED |
 | P12 Security & Governance | PASSED |
-| P10 Testing | next |
+| P10 Testing | PASSED |
+| P13 Independent Audit | next |
 | P13–P21 | not started |
 
 7 of the 10 binding P2 conditions are closed. See `docs/phase-plan.md` for live gate status and
@@ -40,7 +41,8 @@ npm install
 npm run seed     # deterministic; snapshot hash 0dfe4d97…a65a0b8
 npm run dev      # control tower on http://localhost:3000
 npm run demo     # end-to-end transcript (add -- --approve to run through execution)
-npm test         # 167 tests
+npm test         # 204 tests
+npm run test:coverage  # 97.5% lines
 npm run eval     # AI guardrail evaluation, 17/17
 ```
 
@@ -141,6 +143,7 @@ This project follows a strict honesty contract (Master Prompt §30):
 | `docs/agents.md` | Agent specification — which seams are genuine agents, which are narration, and why |
 | `docs/design-extension.md` | Additive product-surface extension to `DESIGN.md` (resolves R0-2, R0-3) |
 | `docs/P5-deterministic-core.md` … `docs/P12-security-governance.md` | Phase output packages |
+| `docs/P10-testing.md` | Test strategy, coverage analysis, defect D10-1 |
 | `docs/security.md`, `docs/governance.md` | Trust boundaries, authority model, approval rules |
 | `docs/changelog.md` | Reverse-chronological, one entry per phase gate, with propagation records |
 | `docs/ADR/` | ADR-0001 architecture · 0002 AI boundary · 0003 governance · 0004 SAP strategy · 0005 determinism |

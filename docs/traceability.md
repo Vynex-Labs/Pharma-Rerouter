@@ -183,5 +183,9 @@ Confirms every AR from `architecture.md` §8 is testable (handoff obligation fro
 - **P12 update (2026-09-07):** REQ-030…038 and REQ-040 move to VERIFIED; REQ-040 leaves PARTIAL.
   Risk **AR-R3 CLOSED**. **167/167 tests.** Scope limit: authorization only, no authentication —
   see `docs/security.md` §1.
+- **P10 update (2026-09-07):** **204/204 tests**, coverage 97.52% lines / 87.55% branches.
+  HTTP layer, bounded-execution rollback and determinism now directly tested; D8-2 drift guard
+  verified. Found **D10-1 (HIGH)** — a reroute onto a CLOSED lane was ranked FEASIBLE and first;
+  fixed with a `LANE_UNAVAILABLE` constraint. REQ-050…055, REQ-093, NFR-002, NFR-007 strengthened.
 - Remaining requirements are owned by P10 (testing), P11 (AI evaluation),
   P12 (governance/approval capture), P13+ (audit, red team, demo).

@@ -6,6 +6,38 @@ workflow must appear here together with its propagation record (Master Prompt §
 
 ---
 
+## [0.6.1] — 2026-09-07 — Phase P10: Testing
+
+**204/204 tests** (was 167). Coverage 97.52% lines / 87.55% branches.
+
+### Added
+- `tests/http.test.mjs` (10) — a real server on an ephemeral port with real `fetch`. The HTTP
+  routing table had never been executed by a test. Covers routes, MIME, 404, REQ-093 provenance,
+  NFR-007 typed errors, **path traversal**, and read idempotence.
+- `tests/execution.test.mjs` (13) — stock conservation, FEFO lot selection, over-draw refusal,
+  REQ-052 version bumps, **transactional rollback**, authorization expiry / single-use / hash
+  binding.
+- `tests/determinism.test.mjs` (14) — seed reproducibility, the published snapshot hash asserted
+  against the code, 6× repeat-run equality, total ordering, clock and `Math.random` bans,
+  schema-drift guard (D8-2), integer-money invariants.
+
+### Fixed
+- **D10-1 (HIGH)** `buildReroute` and `buildAltPort` resolved lanes by ID directly from the
+  snapshot, while only `buildGraph` honoured `status='CLOSED'`. With every lane in the network
+  closed, the engine returned `AIR_REROUTE` as **FEASIBLE and ranked it first** — it would have
+  recommended, costed and executed a reroute onto a shut lane. Added a first-class
+  `checkLaneAvailability()` constraint emitting `LANE_UNAVAILABLE`, wired through the same
+  `evaluateConstraints` gate as cold-chain and capacity. `scenarios.mjs` had 100% line coverage
+  throughout: the tests only ever asked questions to which "open" was the right answer.
+
+### Known limitations
+- `assertSchemaCurrent` is a drift guard, not a migration system.
+- `pipeline.mjs` branch coverage ~54%; BLOCKED and stale-approval paths are exercised through
+  `governance.test.mjs` rather than `runPipeline`.
+- Browser-level testing remains impossible in this sandbox; UI verification is jsdom-based.
+
+---
+
 ## [0.6.0] — 2026-09-07 — Phases P11, P12 (run in parallel)
 
 **Phases P11 (AI Evaluation) and P12 (Security & Governance) complete.** 167/167 tests.

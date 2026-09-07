@@ -16,7 +16,7 @@ import { computeTransportCost, computeRiskScore } from './scoring.mjs';
 import {
   checkColdChain,
   checkSupplierQualification,
-  checkCapacity,
+  checkCapacity, checkLaneAvailability,
   checkLeadTime,
   evaluateConstraints,
   FEASIBLE,
@@ -179,6 +179,7 @@ function buildReroute({ impact, snapshot, graph, productIndex, asOf, id, origin 
     if (product) checks.push(checkColdChain(product, path));
   }
   checks.push(checkCapacity(path, units));
+  checks.push(checkLaneAvailability(path)); // D10-1
 
   const verdict = evaluateConstraints(checks);
   s.feasibility = verdict.feasibility;
@@ -242,6 +243,7 @@ function buildAltPort(ctx) {
     .filter(Boolean)
     .map((p) => checkColdChain(p, path));
   checks.push(checkCapacity(path, units));
+  checks.push(checkLaneAvailability(path)); // D10-1
 
   const verdict = evaluateConstraints(checks);
   s.feasibility = verdict.feasibility;
