@@ -56,3 +56,43 @@ architecture gate to pass before implementation begins. P4 (Data Architecture) i
 ### Open conditions carried forward
 PM-1 (P8) · DE-1 (P5) · DE-2 (P5) · AI-1 (P6) · AI-2 (P11) · DA-1 (P4) · DA-2 (P4) · SAP-1 (P7) ·
 SAP-2 (P18) · CA-2 (P6).
+
+---
+
+## [0.2.0] — 2026-09-07 — Phase P4: Data Architecture
+
+### Added
+- `docs/ADR/0005-technology-stack.md` — TypeScript/Node 22 + embedded SQLite + Express/Zod +
+  React/Vite; four alternatives considered; determinism rules imposed on the stack
+  (integer minor units, UTC strings, sorted iteration, seeded PRNG).
+- `docs/data-model.md` — entity model, canonical-serialisation spec, snapshot mechanism, state
+  machine, data classification table, flagship seed design.
+- `src/db/schema.sql` — 22 STRICT tables covering network graph, product/inventory, disruption and
+  analysis, governance, observability and the hash-chained ledger; append-only triggers.
+- `src/core/canonical.mjs` — canonical serialisation and hashing (closes **DA-1**).
+- `src/core/audit.mjs` — append-only hash-chained ledger with `verify()` and `export()`.
+- `src/core/snapshot.mjs` — input snapshots and decision payload hashing (closes **DA-2**).
+- `src/db/seed.mjs` + `scripts/seed.mjs` — seeded synthetic flagship network (14 facilities,
+  18 lanes, 2 products, 9 lots, 7 orders, 4 shipments, 1 disruption advisory).
+- `tests/` — 26 tests, all passing.
+- `.gitignore`, `.env.example`, `package.json`.
+
+### Conditions closed
+**DA-1** (canonical serialisation) · **DA-2** (scenario input snapshot).
+
+### Risks closed
+**R-05** (no `.gitignore`) · **AR-R2** (hash chain never verified).
+
+### Corrections made during verification
+- **ADR-0005 verification correction:** the stack probe installed `better-sqlite3` unpinned
+  (resolved 13.0.3, prebuilt) but `package.json` was written with `^11.0.0`, which has no prebuild
+  for Node 22 and failed to compile offline. Pinned to `^13.0.3`. Lesson recorded: an unpinned probe
+  does not verify the version you depend on.
+- **Audit tamper test rewritten:** the first version was blocked by the append-only triggers, so the
+  hash chain was never actually exercised. It now explicitly drops the triggers to simulate an
+  attacker with raw file access — the actual threat model ADR-0003 addresses.
+- **Empty-table assertion replaced:** a `throws` assertion against the unpopulated `approval` table
+  would have passed for the wrong reason; replaced with a schema-level trigger assertion.
+
+### Traceability
+16 requirements moved off PENDING; 13 now VERIFIED with passing tests.

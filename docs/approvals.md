@@ -100,3 +100,26 @@ A conditional approval is never treated as unconditional release approval.
 
 ## Pending
 No approval records exist for P4–P21. P4 is unblocked and is the next phase.
+
+---
+
+## APR-P4-001
+
+| Field | Value |
+|---|---|
+| Phase | P4 — Data Architecture |
+| Phase version | 1.0 |
+| Approver role | Data Architect (primary) |
+| Supporting review | Backend Engineer, Domain Expert |
+| Date/time | 2026-09-07 (UTC) |
+| Decision | **APPROVED** |
+| Acceptance criteria reviewed | "Flagship disruption can be represented completely" — satisfied; every element of P1 §8 maps to a table, verified by `tests/seed.test.mjs` REQ-102 |
+| Evidence reviewed | `docs/data-model.md`; `src/db/schema.sql` (22 tables, STRICT typing, append-only triggers); `src/core/canonical.mjs`; `src/core/audit.mjs`; `src/core/snapshot.mjs`; `src/db/seed.mjs`; **26/26 tests passing**; reproducible seed hash `673d8f1e…7cdaa2` |
+| Conditions closed | **DA-1** — canonical serialisation specified and tested (key order, timezone, float, null/undefined, non-finite rejection). **DA-2** — `input_snapshot` implemented; scenarios and authorizations bind to `snapshot_hash`. |
+| Outstanding issues | REQ-072 and REQ-040 are PARTIAL pending P7/P12; `REQ-014` full determinism awaits the P5 engines |
+| Risk assessment | Acceptable. AR-R2 (hash chain never verified) is now **CLOSED** — two tests prove that mutating a payload or a chain hash is detected and the offending record is named. |
+| Linked artefacts | `docs/data-model.md`, `docs/ADR/0005-technology-stack.md`, `src/db/*`, `src/core/*`, `tests/*` |
+| Linked tests | `tests/canonical.test.mjs` (9), `tests/audit.test.mjs` (7), `tests/seed.test.mjs` (10) |
+| Linked requirements | REQ-014, 028, 040, 051, 072, 080–085, 100–105, NFR-004 |
+| Linked findings | Three test failures found and resolved during verification — see Comments |
+| Comments | Two of the three initial test failures were **the system working correctly**: the append-only triggers blocked the tamper attempt, which meant the hash chain itself was never being exercised. The test was rewritten to explicitly drop the triggers first — simulating an attacker who already has raw file access — because that is the only honest way to test defence two, and it is exactly the threat model ADR-0003 claims to address (tamper-*evident*, not tamper-*proof*). The third failure was a test asserting `throws` against an empty table, which would have passed for the wrong reason; it was replaced with a schema-level assertion. A separate correction was recorded in ADR-0005 after the pinned `better-sqlite3` range turned out to have no prebuild for Node 22 — the original probe had not pinned a version, so it verified something different from what was depended on. |

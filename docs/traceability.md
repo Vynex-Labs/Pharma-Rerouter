@@ -23,7 +23,7 @@ A requirement may not be marked satisfied until all four downstream columns are 
 | REQ-011 | arch §7; P1 §8 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-012 | P1 §13 Challenge 3 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-013 | P1 §4 journey | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-014 | AR-1; NFR-004 | PENDING | PENDING | PENDING | DESIGNED |
+| REQ-014 | AR-1; NFR-004 | snapshot replay | `tests/seed.test.mjs` NFR-004 | pass | PARTIAL (P5) |
 | REQ-015 | ADR-0002 §1; seam S2 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-020 | arch §7 scenario engine | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-021 | AR-1 | PENDING | PENDING | PENDING | DESIGNED |
@@ -33,7 +33,7 @@ A requirement may not be marked satisfied until all four downstream columns are 
 | REQ-025 | arch §7 MCDA ranker | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-026 | Condition CA-2; ADR-0002 tool matrix | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-027 | ADR-0002 §1 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-028 | Condition DA-2 | PENDING | PENDING | PENDING | DESIGNED |
+| REQ-028 | `input_snapshot` FK from `scenario` | `src/core/snapshot.mjs` | `tests/seed.test.mjs` DA-2 | 26/26 pass | VERIFIED |
 | REQ-030 | ADR-0003 §1 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-031 | ADR-0001 seam S4 (no agent) | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-032 | ADR-0003 §2 | PENDING | PENDING | PENDING | DESIGNED |
@@ -44,10 +44,10 @@ A requirement may not be marked satisfied until all four downstream columns are 
 | REQ-037 | ADR-0003 §4 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-038 | ADR-0003 §4; AR-3 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-039 | ADR-0003 §4 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-040 | ADR-0003 §4 | PENDING | PENDING | PENDING | DESIGNED |
+| REQ-040 | ADR-0003 §4 | `approval` append-only triggers | `tests/seed.test.mjs` REQ-040 | pass | PARTIAL (P12) |
 | REQ-041 | ADR-0003 §2 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-050 | AR-3; ADR-0003 §4 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-051 | AR-3; DA-1 | PENDING | PENDING | PENDING | DESIGNED |
+| REQ-051 | AR-3; DA-1 | `src/core/snapshot.mjs` computeDecisionPayloadHash | `tests/seed.test.mjs` REQ-051 | pass | VERIFIED |
 | REQ-052 | F-8; arch §7 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-053 | P1 §4 T+6m | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-054 | P1 §5 | PENDING | PENDING | PENDING | DESIGNED |
@@ -63,17 +63,17 @@ A requirement may not be marked satisfied until all four downstream columns are 
 | REQ-068 | ADR-0002 §7; AR-7 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-070 | ADR-0004 §1 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-071 | ADR-0004 §2 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-072 | ADR-0004 §2; AR-R4 | PENDING | PENDING | PENDING | DESIGNED |
+| REQ-072 | ADR-0004 §2; AR-R4 | `schema.sql` data_source CHECK | `tests/seed.test.mjs` REQ-072 | pass | PARTIAL (adapter at P7) |
 | REQ-073 | ADR-0004 §3 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-074 | ADR-0004 §4 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-075 | ADR-0004 §5; Condition SAP-1 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-076 | ADR-0004 §6; NFR-005 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-080 | ADR-0003 §5 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-081 | ADR-0003 §5; DA-1 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-082 | AR-4 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-083 | AR-R2 mitigation | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-084 | ADR-0003 §5 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-085 | ADR-0003 honesty note | PENDING | PENDING | PENDING | DESIGNED |
+| REQ-080 | ADR-0003 §5 | `src/core/audit.mjs` | `tests/audit.test.mjs` | pass | IMPLEMENTED |
+| REQ-081 | ADR-0003 §5; DA-1 | `src/core/canonical.mjs`, `audit.mjs` | `tests/canonical.test.mjs`, `audit.test.mjs` | 9+7 pass | VERIFIED |
+| REQ-082 | AR-4 | schema triggers + no update API | `tests/audit.test.mjs` REQ-082 | pass | VERIFIED |
+| REQ-083 | AR-R2 mitigation | `src/core/audit.mjs` verify() | `tests/audit.test.mjs` REQ-083 ×2 | pass | VERIFIED |
+| REQ-084 | ADR-0003 §5 | `audit.mjs` export() | `tests/audit.test.mjs` REQ-084 | pass | VERIFIED |
+| REQ-085 | ADR-0003 honesty note | `audit.mjs` integrityModel | `tests/audit.test.mjs` REQ-085 | pass | VERIFIED |
 | REQ-090 | Master Prompt §15; arch §7 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-091 | P0 finding R0-2 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-092 | Condition PM-1 | PENDING | PENDING | PENDING | DESIGNED |
@@ -83,12 +83,12 @@ A requirement may not be marked satisfied until all four downstream columns are 
 | REQ-096 | P0 R0-2 (states) | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-097 | DESIGN.md focus ring spec | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-098 | P8 acceptance criterion | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-100 | Master Prompt §12 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-101 | P1 §8 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-102 | P4 acceptance criterion | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-103 | P1 §13 Challenge 3 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-104 | P1 §13 Challenge 2 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-105 | P1 §7 non-goals | PENDING | PENDING | PENDING | DESIGNED |
+| REQ-100 | Master Prompt §12 | `schema.sql` data_classification | `tests/seed.test.mjs` REQ-100 | pass | VERIFIED |
+| REQ-101 | P1 §8 | `src/db/seed.mjs` mulberry32 | `tests/seed.test.mjs` REQ-101 | pass | VERIFIED |
+| REQ-102 | P4 acceptance criterion | `src/db/seed.mjs` | `tests/seed.test.mjs` REQ-102 + non-trivial | pass | VERIFIED |
+| REQ-103 | P1 §13 Challenge 3 | `inventory_lot.expiry_date` | `tests/seed.test.mjs` REQ-103 | pass | VERIFIED |
+| REQ-104 | P1 §13 Challenge 2 | `supplier_product.qualified_markets` | `tests/seed.test.mjs` REQ-104 | pass | VERIFIED |
+| REQ-105 | P1 §7 non-goals | schema (no person entity) | `tests/seed.test.mjs` REQ-105 | pass | VERIFIED |
 
 ## 2. Non-Functional Requirements
 
@@ -97,7 +97,7 @@ A requirement may not be marked satisfied until all four downstream columns are 
 | NFR-001 | arch §7 | PENDING | PENDING | PENDING | DESIGNED |
 | NFR-002 | P1 §4 | PENDING | PENDING | PENDING | DESIGNED |
 | NFR-003 | ADR-0002 §6; F-1 | PENDING | PENDING | PENDING | DESIGNED |
-| NFR-004 | AR-1 | PENDING | PENDING | PENDING | DESIGNED |
+| NFR-004 | AR-1 | `src/db/seed.mjs` seeded PRNG | `tests/seed.test.mjs` | seed hash stable across runs | VERIFIED |
 | NFR-005 | ADR-0004 §6 | PENDING | PENDING | PENDING | DESIGNED |
 | NFR-006 | arch §7 | PENDING | PENDING | PENDING | DESIGNED |
 | NFR-007 | AR-2 | PENDING | PENDING | PENDING | DESIGNED |
@@ -150,4 +150,6 @@ Confirms every AR from `architecture.md` §8 is testable (handoff obligation fro
 - Functional requirements: 62 · Non-functional: 12 · **Total: 74**
 - All 74 traced to a design artefact. Zero orphan requirements. Zero orphan architectural rules.
 - All 10 P2 conditions have at least one requirement. All 8 failure modes covered.
-- Implementation/Test/Evidence: 0% — expected and correct at the P3 baseline.
+- **P4 update (2026-09-07):** 16 requirements moved off PENDING; 13 now VERIFIED with passing tests
+  (26/26 in `npm test`). Conditions **DA-1** and **DA-2** are CLOSED.
+- Remaining requirements are owned by P5 (engines), P6 (agents), P7 (SAP), P8 (UI), P12 (governance).

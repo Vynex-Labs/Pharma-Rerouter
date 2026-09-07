@@ -15,10 +15,10 @@ signed, and no Critical/High blocker it owns remains open (Master Prompt §21).
 | P1 | Problem Definition | P0 | **PASSED** | Product Manager | Domain Expert |
 | P2 | Architecture | P1 | **PASSED (with conditions)** | System Architect | AI Architect, SAP Strategy, Master Orchestrator |
 | P3 | Requirements | P2 | **PASSED** | Requirements Manager | Product Manager, System Architect |
-| P4 | Data Architecture | P3 | **NOT STARTED** (unblocked — next) | Data Architect | Backend, Domain Expert |
-| P5 | Deterministic Core | P4 | NOT STARTED | Optimization Engineer | Backend, QA |
+| P4 | Data Architecture | P3 | **PASSED** | Data Architect | Backend, Domain Expert |
+| P5 | Deterministic Core | P4 | **NOT STARTED** (unblocked — next) | Optimization Engineer | Backend, QA |
 | P6 | AI / Agent Layer | P5 | NOT STARTED | AI Architect | AI Evaluation, Safety/Governance |
-| P7 | SAP Integration | P2, P3, P4 | NOT STARTED | SAP Integration Engineer | SAP Strategy, System Architect |
+| P7 | SAP Integration | P2, P3, P4 | NOT STARTED (unblocked) | SAP Integration Engineer | SAP Strategy, System Architect |
 | P8 | UI / UX | P2, P3 | NOT STARTED (may run parallel to P4–P7) | UI/UX Designer | Visual QA, Product Manager |
 | P9 | End-to-End Integration | P5, P6, P7, P8 | NOT STARTED | Master Orchestrator | Backend, Frontend, QA |
 | P10 | Testing | P9 | NOT STARTED | QA Engineer | Master Orchestrator |
@@ -34,7 +34,7 @@ signed, and no Critical/High blocker it owns remains open (Master Prompt §21).
 | P20 | Presentation | P19 | NOT STARTED | PPT Designer | Pitch Strategist, Competition Analyst |
 | P21 | Final Release | P10–P20 | NOT STARTED | Master Orchestrator | Auditor, Security, Governance, SAP, QA |
 
-**Critical path:** P4 → P5 → P6 → P9 → {P10 ∥ P11 ∥ P12} → P13 → P14 → P15 → P16 → P17 → P18 → P19 → P20 → P21.
+**Critical path (P4 done):** P5 → P6 → P9 → {P10 ∥ P11 ∥ P12} → P13 → P14 → P15 → P16 → P17 → P18 → P19 → P20 → P21.
 
 ## 2. Permitted Parallelism (Master Prompt §20)
 - **P8 (UI/UX)** may start now — its dependencies P2 and P3 have both passed. It must not consume
@@ -54,7 +54,7 @@ Carried from `docs/P2-architecture-review.md`. A phase may not pass while holdin
 | AI-1 confidence + uncertainty mandatory | P6 | OPEN |
 | AI-2 invalid agent output rejected (proven by eval) | P11 | OPEN |
 | DA-1 canonical serialisation for hashing | P4 | OPEN |
-| DA-2 scenarios persist input snapshot | P4 | OPEN |
+| DA-2 scenarios persist input snapshot | P4 | **CLOSED** (APR-P4-001) |
 | SAP-1 no integration claim without evidence | P7 | OPEN |
 | SAP-2 fallback shown deliberately in demo | P18 | OPEN |
 | CA-2 scenario intents genuinely drive generation | P6 | OPEN |
@@ -70,11 +70,11 @@ resolution required.
 | R-02 | Faked SAP integration | CRITICAL | P7 | MITIGATED BY DESIGN — ADR-0004 §5 language contract |
 | R-03 | DESIGN.md is marketing, product needs status semantics | HIGH | P8 | OPEN — additive extension planned |
 | R-04 | LLM originating authoritative numbers | CRITICAL | P5/P6 | MITIGATED BY DESIGN — ADR-0002 §1 |
-| R-05 | No `.gitignore` | MEDIUM | P4 | OPEN — first implementation commit |
+| R-05 | No `.gitignore` | MEDIUM | P4 | **CLOSED** — `.gitignore` + `.env.example` added |
 | R-06 | Demo fails without live LLM | HIGH | P18 | MITIGATED BY DESIGN — NFR-003 fallback |
 | R0-3 | Proprietary fonts unavailable | MEDIUM | P8 | OPEN — open-source substitute permitted |
 | AR-R1 | Agents look decorative | MEDIUM | P6/P8 | OPEN — condition CA-2 |
-| AR-R2 | Hash chain never verified | MEDIUM | P10 | OPEN — REQ-083 |
+| AR-R2 | Hash chain never verified | MEDIUM | P10 | **CLOSED** — `tests/audit.test.mjs` REQ-083 ×2 |
 | AR-R3 | Policy becomes an if-ladder | MEDIUM | P12 | OPEN — REQ-041 |
 | AR-R4 | Silent SAP fallback presented as live | HIGH | P7 | OPEN — REQ-072 |
 
