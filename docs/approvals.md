@@ -261,3 +261,45 @@ expiring at +3 days. Changing the fixture necessarily changes the canonical snap
 
 The hash is still deterministic — re-running the seed reproduces `0dfe4d97…` exactly. What changed
 is the input, not the determinism guarantee (ADR-0005).
+
+---
+
+## APR-P11-001 — AI Evaluation
+
+| | |
+|---|---|
+| Phase | P11 — AI Evaluation |
+| Decision | APPROVED |
+| Approver role | AI Evaluation Engineer |
+| Reviewers | AI Architect, Safety/Governance |
+| Date | 2026-09-07 |
+| Scope | Adversarial eval dataset (17 cases, 8 failure classes), harness against the real agent runtime, CI assertion, reporting script. |
+| Evidence | `npm run eval` → 17/17 (100%); `npm test` → 167/167; `docs/evidence/ai-eval-report.json`. |
+| Outstanding issues | Cases are scripted provider outputs, not live model samples. AI-2 is closed in the sense "invalid output is provably rejected", NOT "the model has been evaluated". No real LLM has been called in this project. |
+| Risk assessment | Acceptable, with the limitation stated on the artefact itself. |
+| Linked artefacts | `src/eval/cases.mjs`, `src/eval/runner.mjs`, `scripts/eval.mjs`, `docs/P11-ai-evaluation.md` |
+| Linked tests | `tests/eval.test.mjs` (7), plus the 17 dataset cases |
+| Linked requirements | REQ-062…065, NFR-012, conditions AI-1, AI-2 |
+| Linked findings | D11-1 (HIGH), D11-2 (HIGH), D11-3 (MEDIUM) — all fixed |
+| Comments | The eval justified itself by failing. D11-1: the AR-1 deny-list was hand-enumerated and missed `costDeltaMinor` — the actual field name used throughout the engine — while the S3 schema had no top-level authority check at all. D11-2: a payload mixing a real strategy with a hallucinated one was accepted and the hallucination silently dropped. Both share a root cause: **enumerating what is forbidden is a losing strategy**, because the list rots every time a field is added. Replaced with pattern-based rejection plus a small allowlist. Separately, `tests/agents.test.mjs` contained a test asserting D11-2's behaviour was *correct* — the second time in this project a test has encoded a defect as the expected result. |
+
+---
+
+## APR-P12-001 — Security & Governance
+
+| | |
+|---|---|
+| Phase | P12 — Security & Governance |
+| Decision | APPROVED |
+| Approver role | Security Engineer |
+| Reviewers | Safety/Governance, System Architect |
+| Date | 2026-09-07 |
+| Scope | Real deterministic policy engine (S4, no agent), identity/role model, approval evidence contract, separation of duties, staleness invalidation, supersede; `docs/security.md`, `docs/governance.md`. |
+| Evidence | `tests/governance.test.mjs` 24/24; `npm test` 167/167; demo halts at `AWAITING_APPROVAL missing=FINANCE_APPROVER` with two approvers and seals with three (16 events, chain valid); `/api/state` returns policy `1.0.0` with three required roles. |
+| Outstanding issues | **Authorization only — no authentication.** Identities are seeded rows and self-asserted by the caller; there is no SSO, session or token. Declared in `docs/security.md` §1. The audit chain is tamper-evident, not tamper-proof — no external anchor. The read API has no authorization. |
+| Risk assessment | Acceptable for a demonstration. The system protects against mistake, drift and process bypass by trusted operators; it does not protect against an untrusted caller. That distinction is stated rather than blurred. |
+| Linked artefacts | `src/core/policy.mjs`, `src/core/approval.mjs`, `src/db/schema.sql`, `src/db/seed.mjs`, `src/core/pipeline.mjs`, `docs/P12-security-governance.md`, `docs/security.md`, `docs/governance.md` |
+| Linked tests | `tests/governance.test.mjs` (24) |
+| Linked requirements | REQ-030…041, AR-R3 |
+| Linked findings | Evidence-check ordering defect; a test matching its own doc comment — both fixed |
+| Comments | The load-bearing evidence for this phase is a **refusal**, not a success: a run supplying two of three required approvals halts and executes nothing. A gate that has only ever been observed letting things through has not been tested. Two deliberate identity choices carry the design: Ravi holds `SUPPLY_CHAIN_MANAGER` but not `QUALITY_ASSURANCE`, so the person running the incident cannot self-certify a cold-chain reroute; Sofia holds two roles specifically to exercise REQ-036. The flagship's three-role requirement is not configuration — it is three independent rules firing on one action. |

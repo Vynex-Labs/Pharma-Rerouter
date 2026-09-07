@@ -43,9 +43,30 @@ function addHours(iso, hours) {
   return d.toISOString();
 }
 
+/**
+ * Seeded identities, mapped to the P1 personas.
+ *
+ * Note P-3 Daniel holds COMPLIANCE_OFFICER and QUALITY_ASSURANCE — he has blocking power over
+ * cold-chain and GxP-adjacent actions. Ravi deliberately does NOT hold QUALITY_ASSURANCE, so a
+ * cold-chain reroute cannot be approved by him alone; that is the separation of duties the
+ * flagship scenario is designed to exercise.
+ */
+export const IDENTITIES = [
+  ['user:ravi',   'Ravi Menon',      'P-1', ['SUPPLY_CHAIN_MANAGER']],
+  ['user:meera',  'Meera Iyer',      'P-2', ['PROCUREMENT_MANAGER']],
+  ['user:daniel', 'Daniel Okoye',    'P-3', ['COMPLIANCE_OFFICER', 'QUALITY_ASSURANCE']],
+  ['user:priya',  'Priya Raman',     'P-4', ['READ_ONLY']],
+  ['user:sofia',  'Sofia Lindqvist', 'P-5', ['FINANCE_APPROVER', 'SUPPLY_CHAIN_MANAGER']],
+];
+
 export function seedDatabase(db, { seed = 20260907 } = {}) {
   const rng = makeRng(seed);
   const now = SEED_EPOCH;
+
+  const insIdentity = db.prepare(
+    'INSERT OR REPLACE INTO identity (id, display_name, persona, active) VALUES (?,?,?,1)');
+  const insIdentityRole = db.prepare(
+    'INSERT OR REPLACE INTO identity_role (identity_id, role) VALUES (?,?)');
 
   // ---------------------------------------------------------------- facilities
   const facilities = [
@@ -253,6 +274,14 @@ export function seedDatabase(db, { seed = 20260907 } = {}) {
     }
     for (const s of supplierProducts) insSupProd.run(...s);
     insDisruption.run('DSR-0001', now, advisory, 'LN-SEA-PRIMARY');
+
+    // ---------------------------------------------------------------- identities (P12)
+    // Modelled on the P1 personas. Seeded, not self-registered: this is an internal control tower
+    // and P12 governs authorization (who may approve what), not authentication.
+    for (const [id, name, persona, roles] of IDENTITIES) {
+      insIdentity.run(id, name, persona);
+      for (const r of roles) insIdentityRole.run(id, r);
+    }
   });
 
   tx();
@@ -263,6 +292,7 @@ export function seedDatabase(db, { seed = 20260907 } = {}) {
 
   return {
     seed,
+    identities: IDENTITIES.length,
     facilities: facilities.length,
     lanes: lanes.length,
     products: products.length,

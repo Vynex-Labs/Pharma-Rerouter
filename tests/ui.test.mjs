@@ -159,3 +159,14 @@ test('the network map marks the closed lane and the affected facilities', async 
   assert.ok(svg.innerHTML.includes('stroke-dasharray'), 'the closed lane must be visually distinct');
   assert.ok(window.document.getElementById('app').textContent.includes(payload['/api/state'].impact.closedLaneId));
 });
+
+test('the view reports the policy engine\'s own version, never a hardcoded string', async () => {
+  const { POLICY_VERSION } = await import('../src/core/policy.mjs');
+  const state = await buildState();
+  const v = view(state);
+  assert.equal(v.decision.policyVersion, POLICY_VERSION);
+
+  // Guard the actual defect: a literal version baked into the view layer.
+  const src = readFileSync(new URL('../src/api/server.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /policyVersion:\s*['"`]/, 'policy version must be read, not hardcoded');
+});

@@ -47,20 +47,39 @@ test('AR-1/REQ-003: the sensing schema has NO field for an authoritative value',
   );
 });
 
-test('AR-1/REQ-027: a strategy intent carrying cost or feasibility is rejected', () => {
+test('AR-1/REQ-027: a strategy intent carrying cost or feasibility rejects the WHOLE output', () => {
+  // Updated at P11 (defect D11-2). This previously asserted PARTIAL acceptance: the offending
+  // intent was dropped and the valid sibling kept. That is the wrong contract — silently discarding
+  // a fabricated intent hides from the operator that the model invented something, and lets a
+  // fabrication ride along with a legitimate item. Any invalid intent now invalidates the output.
+  assert.throws(
+    () => validateStrategyIntents(
+      {
+        intents: [
+          { strategy: 'AIR_REROUTE', costDeltaMinor: 1, rationale: 'x' },
+          { strategy: 'INVENTORY_REBALANCE', rationale: 'ok' },
+        ],
+        confidence: 0.8, uncertainty: 'none identified',
+      },
+      { knownStrategies: ALL_STRATEGIES },
+    ),
+    (e) => e instanceof ValidationError && /AR-1 violation/.test(e.message),
+  );
+});
+
+test('AR-1: a clean intent list is still accepted', () => {
   const r = validateStrategyIntents(
     {
       intents: [
-        { strategy: 'AIR_REROUTE', costDeltaMinor: 1, rationale: 'x' },
-        { strategy: 'INVENTORY_REBALANCE', rationale: 'ok' },
+        { strategy: 'AIR_REROUTE', rationale: 'fastest lane' },
+        { strategy: 'INVENTORY_REBALANCE', rationale: 'buys days' },
       ],
-      confidence: 0.8, uncertainty: 'none identified',
+      confidence: 0.8, uncertainty: 'Lane capacity not independently confirmed.',
     },
     { knownStrategies: ALL_STRATEGIES },
   );
-  assert.equal(r.intents.length, 1);
-  assert.equal(r.intents[0].strategy, 'INVENTORY_REBALANCE');
-  assert.equal(r.rejected[0].reason, 'AR1_AUTHORITATIVE_FIELD');
+  assert.equal(r.intents.length, 2);
+  assert.equal(r.rejected.length, 0);
 });
 
 // ------------------------------------------------------- AI-1 (REQ-064)

@@ -6,6 +6,47 @@ workflow must appear here together with its propagation record (Master Prompt §
 
 ---
 
+## [0.6.0] — 2026-09-07 — Phases P11, P12 (run in parallel)
+
+**Phases P11 (AI Evaluation) and P12 (Security & Governance) complete.** 167/167 tests.
+
+### Added
+- **Real policy engine** `src/core/policy.mjs` (`POLICY_VERSION 1.0.0`): 4 autonomy classes,
+  11 rules, thresholds declared as data. Seam S4 has **zero imports** — asserted by test.
+- **Approval integrity** `src/core/approval.mjs`: 11-field evidence contract, role verification,
+  separation of duties, state gating, staleness invalidation, append-only supersede.
+- **Identity model**: `identity`, `identity_role`, `approval_invalidation` tables; 5 personas seeded.
+- **AI evaluation harness** `src/eval/`: 17 adversarial cases over 8 failure classes,
+  `npm run eval`, report at `docs/evidence/ai-eval-report.json`.
+- Docs: `security.md`, `governance.md`, `P11-ai-evaluation.md`, `P12-security-governance.md`.
+- Tests: `tests/governance.test.mjs` (24), `tests/eval.test.mjs` (7).
+
+### Fixed
+- **D11-1 (HIGH)** The AR-1 deny-list missed `costDeltaMinor` — the field name actually used
+  throughout the engine — and the S3 schema had no top-level authority check at all. An agent could
+  have supplied a cost figure. Replaced per-schema enumeration with a shared, pattern-based
+  `assertNoAuthoritativeFields()`.
+- **D11-2 (HIGH)** `validateStrategyIntents` accepted an output mixing a valid strategy with a
+  hallucinated one, silently dropping the fabrication. Any invalid intent now rejects the whole
+  output.
+- **D11-3 (MEDIUM)** `server.mjs` hardcoded `policyVersion: 'interim-p9-0.1.0'`, so the UI showed a
+  stale version for three phases. Now reads the engine's own constant, guarded by a test.
+- Approval evidence completeness is checked **before** role verification, so a malformed submission
+  no longer reports a misleading `ROLE_NOT_HELD`.
+
+### Changed
+- `evaluatePolicyInterim` removed; the pipeline captures per-role approvals and re-checks REQ-038
+  staleness immediately before minting an authorization.
+- `tests/agents.test.mjs` — a test that asserted D11-2's incorrect partial-acceptance behaviour has
+  been rewritten to the corrected contract.
+
+### Known limitations
+- **Authorization only — no authentication.** Identities are seeded and self-asserted. See
+  `docs/security.md` §1.
+- Eval cases are scripted provider outputs, not live model samples. No real LLM has been called.
+
+---
+
 ## [0.5.0] — 2026-09-07 — Phase P9: End-to-End Integration
 
 ### Added

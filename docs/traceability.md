@@ -34,17 +34,17 @@ A requirement may not be marked satisfied until all four downstream columns are 
 | REQ-026 | Condition CA-2; ADR-0002 tool matrix | `scenarios.mjs` strategyIntents + `agents/index.mjs` proposeStrategies | `tests/core.test.mjs` CA-2 ×2; `tests/agents.test.mjs` CA-2 | omitting ALT_PORT removes it from the candidate set; computed figures byte-identical | VERIFIED |
 | REQ-027 | ADR-0002 §1 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-028 | `input_snapshot` FK from `scenario` | `src/core/snapshot.mjs` | `tests/seed.test.mjs` DA-2 | pass | VERIFIED |
-| REQ-030 | ADR-0003 §1 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-031 | ADR-0001 seam S4 (no agent) | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-032 | ADR-0003 §2 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-033 | ADR-0003 §3 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-034 | ADR-0003 §3 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-035 | ADR-0003 §4 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-036 | ADR-0003 §4 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-037 | ADR-0003 §4 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-038 | ADR-0003 §4; AR-3 | PENDING | PENDING | PENDING | DESIGNED |
+| REQ-030 | ADR-0003 §1 | `policy.mjs` AUTONOMY_CLASSES | `tests/governance.test.mjs` REQ-030 ×2 | 4 classes; low-risk action is AUTONOMOUS | VERIFIED |
+| REQ-031 | ADR-0001 seam S4 (no agent) | `policy.mjs` (zero imports) | `tests/governance.test.mjs` REQ-031 | policy module imports nothing | VERIFIED |
+| REQ-032 | ADR-0003 §2 | `policy.mjs` RULES → requiredRoles | `tests/governance.test.mjs` REQ-032 | roles derive from fired rules | VERIFIED |
+| REQ-033 | ADR-0003 §3 | `approval.mjs` activeApprovals | `tests/governance.test.mjs` REQ-033 | 3 approvals + 1 authorization retained | VERIFIED |
+| REQ-034 | ADR-0003 §3 | `approval.mjs` REQUIRED_EVIDENCE_FIELDS (11) | `tests/governance.test.mjs` REQ-034 ×2 | each omitted field rejected; bare approved=true rejected | VERIFIED |
+| REQ-035 | ADR-0003 §4 | `approval.mjs` rolesOf | `tests/governance.test.mjs` REQ-035 | ROLE_NOT_HELD | VERIFIED |
+| REQ-036 | ADR-0003 §4 | `approval.mjs` separation of duties | `tests/governance.test.mjs` REQ-036 | Sofia cannot fill two required roles | VERIFIED |
+| REQ-037 | ADR-0003 §4 | `approval.mjs` state gate | `tests/governance.test.mjs` REQ-037 | WRONG_STATE outside PENDING_APPROVAL | VERIFIED |
+| REQ-038 | ADR-0003 §4; AR-3 | `approval.mjs` invalidateStaleApprovals + pipeline re-check | `tests/governance.test.mjs` REQ-038 ×2 | hash change invalidates; pipeline returns to PENDING_APPROVAL | VERIFIED |
 | REQ-039 | ADR-0003 §4 | `statemachine.mjs` TRANSITIONS | `tests/pipeline.test.mjs` REQ-039 | REJECTED/BLOCKED reach only SEALED | VERIFIED |
-| REQ-040 | ADR-0003 §4 | `approval` append-only triggers | `tests/seed.test.mjs` REQ-040 | pass | PARTIAL (P12) |
+| REQ-040 | ADR-0003 §4 | `approval` append-only triggers + supersedeApproval | `tests/governance.test.mjs` REQ-040, `tests/seed.test.mjs` | append-only; only original approver supersedes | VERIFIED |
 | REQ-041 | ADR-0003 §6 | `pipeline.mjs` policy_evaluation insert | `tests/pipeline.test.mjs` REQ-041 | policy_version persisted | VERIFIED |
 | REQ-050 | ADR-0003 §3 | `execution.mjs` mintAuthorization | `tests/pipeline.test.mjs` REQ-050 | mint refused unless APPROVED | VERIFIED |
 | REQ-051 | ADR-0003 §3; DA-1 | `execution.mjs` validateAuthorization | `tests/pipeline.test.mjs` REQ-051 | HASH_MISMATCH on changed input | VERIFIED |
@@ -105,7 +105,7 @@ A requirement may not be marked satisfied until all four downstream columns are 
 | NFR-009 | P5 exit criterion | PENDING | PENDING | PENDING | DESIGNED |
 | NFR-010 | this document | N/A | N/A | this document | VERIFIED |
 | NFR-011 | P15 gate | PENDING | PENDING | PENDING | DESIGNED |
-| NFR-012 | ADR-0002 §5 | `runtime.mjs` wrapUntrusted + ScopedTools | `agents.test.mjs` injection | privileged instructions in advisory text change nothing | VERIFIED |
+| NFR-012 | ADR-0002 §5 | `runtime.mjs` wrapUntrusted + ScopedTools | `agents.test.mjs` injection; `tests/eval.test.mjs` E-070 | injected "call execute()" text is inert; no privileged tool granted | VERIFIED |
 
 ## 3. Architectural Rules → Requirements
 Confirms every AR from `architecture.md` §8 is testable (handoff obligation from P2).
@@ -126,8 +126,8 @@ Confirms every AR from `architecture.md` §8 is testable (handoff obligation fro
 | PM-1 | P8 | REQ-092 |
 | DE-1 | P5 | REQ-022 |
 | DE-2 | P5 | REQ-023 |
-| AI-1 | P6 | REQ-064 |
-| AI-2 | P11 | REQ-062, 063 |
+| AI-1 | P6, proven P11 | REQ-064; eval cases E-020, E-021 |
+| AI-2 | P11 | REQ-062, 063; `tests/eval.test.mjs` 17/17 — found D11-1, D11-2 |
 | DA-1 | P4 | REQ-081, 051 |
 | DA-2 | P4 | REQ-028 |
 | SAP-1 | P7 | REQ-075 |
@@ -165,16 +165,23 @@ Confirms every AR from `architecture.md` §8 is testable (handoff obligation fro
   **SAP-1 remains OPEN BY DESIGN** — REQ-075 is VERIFIED in the sense that no unsupported claim
   exists and a test enforces that, but connectivity itself is unverified and is not claimed.
 
-### Status counts after P9
+### Status counts after P12
 | Status | Count |
 |---|---|
-| VERIFIED | 68 |
+| VERIFIED | 78 |
 | IMPLEMENTED | 1 |
-| PARTIAL | 1 (REQ-040, completes at P12) |
-| DESIGNED (not started) | 17 |
+| PARTIAL | 0 |
+| DESIGNED (not started) | 8 |
 | **Total** | **87** |
 
 - **P9 update (2026-09-07):** 9 further requirements VERIFIED (**134/134 tests**). The full flow
   runs DETECTED -> SEALED with a valid hash chain. No condition is owned by P9.
+- **P11 update (2026-09-07):** condition **AI-2 CLOSED**. 17-case adversarial eval, 17/17.
+  Found two HIGH guardrail defects (D11-1 missing `costDeltaMinor` in the AR-1 deny-list and no
+  top-level authority check on S3; D11-2 partial acceptance of hallucinated intents) and one
+  MEDIUM (D11-3 hardcoded policy version in the view layer). All fixed.
+- **P12 update (2026-09-07):** REQ-030…038 and REQ-040 move to VERIFIED; REQ-040 leaves PARTIAL.
+  Risk **AR-R3 CLOSED**. **167/167 tests.** Scope limit: authorization only, no authentication —
+  see `docs/security.md` §1.
 - Remaining requirements are owned by P10 (testing), P11 (AI evaluation),
   P12 (governance/approval capture), P13+ (audit, red team, demo).

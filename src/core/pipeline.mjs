@@ -11,48 +11,17 @@
  * convenience path, because a demo that approves itself would defeat the entire governance model.
  */
 
-import { captureSnapshot } from './snapshot.mjs';
+import { captureSnapshot, computeDecisionPayloadHash } from './snapshot.mjs';
 import { assessImpact } from './impact.mjs';
 import { generateScenarios } from './scenarios.mjs';
 import { rankScenarios } from './scoring.mjs';
 import { DecisionMachine } from './statemachine.mjs';
 import { mintAuthorization, executeDecision, verifyRecovery } from './execution.mjs';
 import { persistImpact, persistScenarios } from './persist.mjs';
+import { evaluatePolicy, persistPolicyEvaluation, POLICY_VERSION } from './policy.mjs';
+import { submitApproval, approvalStatus, invalidateStaleApprovals } from './approval.mjs';
 import { senseDisruption, narrateImpact, proposeStrategies, explainDecision, orchestratorAdvice }
   from '../agents/index.mjs';
-
-/**
- * Interim policy used by P9 to exercise the spine. **This is not the P12 policy engine.**
- * It implements only the coarse classification needed to prove the state machine works; P12
- * replaces it with the full rule table, role routing and evidence contract.
- */
-export const INTERIM_POLICY_VERSION = 'interim-p9-0.1.0';
-
-export function evaluatePolicyInterim(scenario, impact) {
-  if (!scenario) {
-    return { autonomyClass: 'BLOCKED', requiredRoles: [], reason: 'No feasible scenario exists.' };
-  }
-  if (scenario.feasibility === 'BLOCKED') {
-    return {
-      autonomyClass: 'BLOCKED', requiredRoles: [],
-      reason: scenario.infeasibilityReason ?? 'Selected option is blocked by policy.',
-    };
-  }
-  const highValue = Math.abs(scenario.costDeltaMinor) >= 1_000_000; // 10,000 currency units
-  const critical = impact.daysOfCover.some((c) => c.status === 'CRITICAL');
-
-  return {
-    autonomyClass: 'APPROVAL_REQUIRED',
-    requiredRoles: highValue || critical
-      ? ['SUPPLY_CHAIN_MANAGER', 'QUALITY_ASSURANCE']
-      : ['SUPPLY_CHAIN_MANAGER'],
-    reason: highValue
-      ? 'Cost impact exceeds the autonomous threshold; dual approval required.'
-      : critical
-        ? 'A site is below the critical cover threshold; dual approval required.'
-        : 'Routine rerouting within thresholds; single approval required.',
-  };
-}
 
 /**
  * Returns the bounded action list for a scenario.
@@ -151,18 +120,12 @@ export async function runPipeline({
   });
 
   // ---------------------------------------------------------------- POLICY_EVALUATED
-  const policy = evaluatePolicyInterim(selected, impact);
-  const policyEvalId = `POL-${decision.id}`;
-  db.prepare(
-    `INSERT INTO policy_evaluation
-       (id, decision_id, evaluated_at, autonomy_class, required_roles_json, fired_rules_json,
-        policy_version, reason)
-     VALUES (?,?,?,?,?,?,?,?)`,
-  ).run(
-    policyEvalId, decision.id, new Date().toISOString(), policy.autonomyClass,
-    JSON.stringify(policy.requiredRoles), JSON.stringify(['interim-p9']),
-    INTERIM_POLICY_VERSION, policy.reason,
-  );
+  // S4 — deterministic policy engine. No agent involvement (REQ-031).
+  const policy = evaluatePolicy({
+    scenario: selected, impact,
+    agentConfidence: sensing.output.confidence ?? null,
+  });
+  const policyEvalId = persistPolicyEvaluation(db, { decisionId: decision.id, verdict: policy });
 
   const actions = actionsFor(selected);
   const payloadInputs = {
@@ -170,7 +133,7 @@ export async function runPipeline({
     selectedScenarioId: selected?.id ?? null,
     snapshotHash: snapshot.snapshotHash,
     actions,
-    policyVersion: INTERIM_POLICY_VERSION,
+    policyVersion: POLICY_VERSION,
   };
 
   machine.transition(decision.id, 'POLICY_EVALUATED', { expectedVersion: 4 });
@@ -190,6 +153,7 @@ export async function runPipeline({
   const base = {
     decisionId: decision.id, machine, snapshot, impact, gen, ranked, excluded, weights,
     selected, policy, policyEvalId, actions, payloadInputs, trace, impactId,
+    policyVersion: POLICY_VERSION,
     agents: { sensing, narrative, intents, explanation, advice },
     disruption: classified,
   };
@@ -213,16 +177,83 @@ export async function runPipeline({
     return { ...base, state: machine.get(decision.id).state, executed: null, recovery: null };
   }
 
-  // ---------------------------------------------------------------- APPROVED
-  const current = machine.get(decision.id);
-  machine.transition(decision.id, 'APPROVED', {
-    actor: approval.approverIdentity,
-    expectedVersion: current.version,
+  // ---------------------------------------------------------------- APPROVAL CAPTURE (P12)
+  // `approvals` is a list of {identity, role, comments}. Each is captured individually and
+  // validated against the policy verdict, role holdings and separation of duties.
+  const submitted = [];
+  for (const a of (approval.approvals ?? [])) {
+    submitted.push(submitApproval(db, ledger, {
+      decisionId: decision.id,
+      approverIdentity: a.identity,
+      requiredRole: a.role,
+      decisionValue: a.decisionValue ?? 'APPROVED',
+      requestedAction: `${selected.strategyType}: ${actions.length} bounded action(s)`,
+      reason: a.reason ?? policy.reason,
+      riskClassification: `risk ${selected.riskScore}/100, ${policy.autonomyClass}`,
+      policyEvaluationId: policyEvalId,
+      snapshotId: snapshot.id,
+      selectedScenarioId: selected.id,
+      alternatives: [...ranked.slice(1), ...excluded].map((x) => ({
+        id: x.id, strategy: x.strategyType, score: x.score ?? null,
+        feasibility: x.feasibility, reason: x.infeasibilityReason ?? null,
+      })),
+      policyVersion: POLICY_VERSION,
+      systemVersion,
+      agentRecommendation: explanation?.output?.text ?? null,
+      agentConfidence: sensing.output.confidence ?? null,
+      agentUncertainty: sensing.output.uncertainty ?? null,
+      decisionPayloadHash: computeDecisionPayloadHash(payloadInputs),
+      comments: a.comments ?? null,
+    }));
+  }
+
+  const status = approvalStatus(db, decision.id, policy.requiredRoles);
+  step('APPROVAL_CAPTURED', {
+    granted: submitted.length, satisfied: status.satisfied,
+    missing: status.missingRoles, rejected: status.rejected,
   });
-  step('APPROVED', { approver: approval.approverIdentity });
+
+  if (status.rejected) {
+    machine.transition(decision.id, 'REJECTED', {
+      actor: status.rejectedBy[0].identity,
+      expectedVersion: machine.get(decision.id).version,
+      reason: 'Rejected by an approver.',
+    });
+    machine.transition(decision.id, 'SEALED', {
+      expectedVersion: machine.get(decision.id).version,
+    });
+    step('REJECTED', { by: status.rejectedBy });
+    return { ...base, state: machine.get(decision.id).state, executed: null, recovery: null, approvals: submitted };
+  }
+
+  if (!status.satisfied) {
+    step('AWAITING_APPROVAL', { missingRoles: status.missingRoles });
+    return { ...base, state: machine.get(decision.id).state, executed: null, recovery: null, approvals: submitted };
+  }
+
+  // ---------------------------------------------------------------- APPROVED
+  machine.transition(decision.id, 'APPROVED', {
+    actor: submitted[0].approver_identity,
+    expectedVersion: machine.get(decision.id).version,
+  });
+  step('APPROVED', { approvers: submitted.map((a) => `${a.approver_identity}/${a.required_role}`) });
+
+  // REQ-038: re-check that nothing changed between approval and authorization.
+  const staleCheck = invalidateStaleApprovals(db, ledger, { ...payloadInputs });
+  if (staleCheck.invalidated > 0) {
+    machine.transition(decision.id, 'PENDING_APPROVAL', {
+      expectedVersion: machine.get(decision.id).version,
+      reason: 'Decision inputs changed; approvals invalidated.',
+    });
+    step('APPROVAL_INVALIDATED', { count: staleCheck.invalidated });
+    return { ...base, state: machine.get(decision.id).state, executed: null, recovery: null, approvals: submitted };
+  }
 
   const auth = mintAuthorization(db, ledger, {
-    ...payloadInputs, approvals: approval.approvals ?? [approval.approverIdentity],
+    ...payloadInputs,
+    approvals: submitted.map((a) => ({
+      approvalId: a.id, identity: a.approver_identity, role: a.required_role,
+    })),
   });
 
   // ---------------------------------------------------------------- EXECUTING

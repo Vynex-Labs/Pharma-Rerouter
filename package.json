@@ -1,6 +1,6 @@
 {
   "name": "pharma-rerouter",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "description": "Agentic Pharmaceutical Supply-Chain Resilience Control Tower \u2014 SAP Hackfest 2026 Theme 1",
   "type": "module",
@@ -13,7 +13,8 @@
     "test:coverage": "node --test --experimental-test-coverage \"tests/**/*.test.mjs\"",
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
-    "demo": "node scripts/demo.mjs"
+    "demo": "node scripts/demo.mjs",
+    "eval": "node scripts/eval.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3"

@@ -11,7 +11,7 @@ SAP Hackfest 2026 · Theme 1: Resilient Supply Chains
 
 ## Current status
 
-**Phases P0–P9 complete. The full flow runs end to end. `npm test` → 134/134 passing.**
+**Phases P0–P9, P11, P12 complete. The full flow runs end to end. `npm test` → 167/167 passing.**
 
 | Phase | Status |
 |---|---|
@@ -25,7 +25,9 @@ SAP Hackfest 2026 · Theme 1: Resilient Supply Chains
 | P7 SAP Integration | PASSED WITH CONDITION — SAP-1 open by design |
 | P8 Control Tower UI | PASSED — closes PM-1 |
 | P9 End-to-End Integration | PASSED |
-| P10 Testing · P11 AI Evaluation · P12 Governance | next (may run in parallel) |
+| P11 AI Evaluation | PASSED |
+| P12 Security & Governance | PASSED |
+| P10 Testing | next |
 | P13–P21 | not started |
 
 7 of the 10 binding P2 conditions are closed. See `docs/phase-plan.md` for live gate status and
@@ -38,7 +40,8 @@ npm install
 npm run seed     # deterministic; snapshot hash 0dfe4d97…a65a0b8
 npm run dev      # control tower on http://localhost:3000
 npm run demo     # end-to-end transcript (add -- --approve to run through execution)
-npm test         # 134 tests
+npm test         # 167 tests
+npm run eval     # AI guardrail evaluation, 17/17
 ```
 
 Everything runs offline. The default LLM provider is a deterministic mock, and the SAP adapter
@@ -59,11 +62,15 @@ hash-chained audit → eight-screen control tower.
 
 Flagship run: 4 orders at risk → **1** after execution, recovery objective met, chain valid.
 
-**Not yet built: approval capture (P12).** The pipeline genuinely halts at `PENDING_APPROVAL` —
-nothing executes and no authorization is minted without approval evidence. There is no Approve
-button, because identity checks, role verification, self-approval prevention and stale-approval
-invalidation do not exist yet. The policy engine in use is an interim one named
-`evaluatePolicyInterim` so it cannot be mistaken for the real thing.
+**Governance (P12) is real.** The deterministic policy engine (`POLICY_VERSION 1.0.0`, 11 rules,
+no agent involvement) classifies the flagship as `APPROVAL_REQUIRED` needing **three** roles —
+FINANCE_APPROVER + QUALITY_ASSURANCE + SUPPLY_CHAIN_MANAGER — because three independent rules fire.
+Approvals require an 11-field evidence contract; a bare `approved=true` is rejected. A run
+supplying only two of the three approvals **halts** at `AWAITING_APPROVAL` and executes nothing.
+
+**Scope limit: authorization, not authentication.** Identities are seeded rows asserted by the
+caller — there is no SSO, session or token. The system protects against mistake, drift and process
+bypass by trusted operators, not against an untrusted caller. See `docs/security.md` §1.
 
 ## The problem
 
@@ -133,7 +140,8 @@ This project follows a strict honesty contract (Master Prompt §30):
 | `docs/approvals.md` | Phase approval evidence records |
 | `docs/agents.md` | Agent specification — which seams are genuine agents, which are narration, and why |
 | `docs/design-extension.md` | Additive product-surface extension to `DESIGN.md` (resolves R0-2, R0-3) |
-| `docs/P5-deterministic-core.md` … `docs/P9-end-to-end.md` | Phase output packages |
+| `docs/P5-deterministic-core.md` … `docs/P12-security-governance.md` | Phase output packages |
+| `docs/security.md`, `docs/governance.md` | Trust boundaries, authority model, approval rules |
 | `docs/changelog.md` | Reverse-chronological, one entry per phase gate, with propagation records |
 | `docs/ADR/` | ADR-0001 architecture · 0002 AI boundary · 0003 governance · 0004 SAP strategy · 0005 determinism |
 

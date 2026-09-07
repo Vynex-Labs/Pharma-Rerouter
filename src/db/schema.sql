@@ -353,3 +353,35 @@ CREATE TRIGGER IF NOT EXISTS approval_no_delete
 CREATE TRIGGER IF NOT EXISTS guardrail_no_delete
   BEFORE DELETE ON guardrail_event
   BEGIN SELECT RAISE(ABORT, 'guardrail_event is append-only'); END;
+
+-- ============================================================ IDENTITY & ROLES (P12)
+
+-- Identities are seeded, not self-registered. This is an internal control tower, and P12 models
+-- authorization, not authentication: who may approve what. Real SSO is out of scope and is
+-- declared as such in docs/security.md.
+CREATE TABLE IF NOT EXISTS identity (
+  id           TEXT PRIMARY KEY,            -- 'user:ravi'
+  display_name TEXT NOT NULL,
+  persona      TEXT,                        -- P-1..P-5 from docs/P1-problem-definition.md
+  active       INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0,1))
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS identity_role (
+  identity_id TEXT NOT NULL REFERENCES identity(id),
+  role        TEXT NOT NULL CHECK (role IN
+                ('SUPPLY_CHAIN_MANAGER','PROCUREMENT_MANAGER','COMPLIANCE_OFFICER',
+                 'QUALITY_ASSURANCE','FINANCE_APPROVER','READ_ONLY')),
+  PRIMARY KEY (identity_id, role)
+) STRICT;
+
+-- REQ-038: an approval is invalidated when decision inputs change. We never delete the record —
+-- we mark it superseded, so the trail shows that an approval existed and why it stopped counting.
+CREATE TABLE IF NOT EXISTS approval_invalidation (
+  id           TEXT PRIMARY KEY,
+  approval_id  TEXT NOT NULL REFERENCES approval(id),
+  decision_id  TEXT NOT NULL REFERENCES decision(id),
+  invalidated_at TEXT NOT NULL,
+  reason       TEXT NOT NULL,
+  old_hash     TEXT NOT NULL,
+  new_hash     TEXT NOT NULL
+) STRICT;

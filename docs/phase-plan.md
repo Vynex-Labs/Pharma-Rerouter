@@ -22,8 +22,8 @@ signed, and no Critical/High blocker it owns remains open (Master Prompt §21).
 | P8 | UI / UX | P2, P3 | **COMPLETE** (APR-P8-001) | UI/UX Designer | Visual QA, Product Manager |
 | P9 | End-to-End Integration | P5, P6, P7, P8 | **COMPLETE** (APR-P9-001) | Master Orchestrator | Backend, Frontend, QA |
 | P10 | Testing | P9 | **NOT STARTED** (unblocked — next) | QA Engineer | Master Orchestrator |
-| P11 | AI Evaluation | P6, P9 | **NOT STARTED** (unblocked) | AI Evaluation Engineer | AI Architect, Safety/Governance |
-| P12 | Security & Governance | P2, P6, P7, P9 | **NOT STARTED** (unblocked) | Security Engineer | Safety/Governance, System Architect |
+| P11 | AI Evaluation | P6, P9 | **COMPLETE** (APR-P11-001) | AI Evaluation Engineer | AI Architect, Safety/Governance |
+| P12 | Security & Governance | P2, P6, P7, P9 | **COMPLETE** (APR-P12-001) | Security Engineer | Safety/Governance, System Architect |
 | P13 | Independent Audit | P10, P11, P12 | NOT STARTED | Independent Auditor | (findings not alterable by Orchestrator) |
 | P14 | Red Team | P13 | NOT STARTED | Red Team | Independent Auditor, Security |
 | P15 | Documentation & Records | P13, P14 | NOT STARTED | Engineering Records Manager | Master Orchestrator |
@@ -34,7 +34,7 @@ signed, and no Critical/High blocker it owns remains open (Master Prompt §21).
 | P20 | Presentation | P19 | NOT STARTED | PPT Designer | Pitch Strategist, Competition Analyst |
 | P21 | Final Release | P10–P20 | NOT STARTED | Master Orchestrator | Auditor, Security, Governance, SAP, QA |
 
-**Critical path (P0–P9 done):** {P10 ∥ P11 ∥ P12} → P13 → P14 → P15 → P16 → P17 → P18 → P19 → P20 → P21.
+**Critical path (P0–P9, P11, P12 done):** P10 → P13 → P14 → P15 → P16 → P17 → P18 → P19 → P20 → P21.
 
 ## 2. Permitted Parallelism (Master Prompt §20)
 - **P8 (UI/UX)** may start now — its dependencies P2 and P3 have both passed. It must not consume
@@ -52,7 +52,7 @@ Carried from `docs/P2-architecture-review.md`. A phase may not pass while holdin
 | DE-1 cold-chain feasibility is a hard gate | P5 | **CLOSED** (APR-P5-001) |
 | DE-2 supplier qualification can BLOCK | P5 | **CLOSED** (APR-P5-001) |
 | AI-1 confidence + uncertainty mandatory | P6 | **CLOSED** (APR-P6-001) |
-| AI-2 invalid agent output rejected (proven by eval) | P11 | OPEN |
+| AI-2 invalid agent output rejected (proven by eval) | P11 | **CLOSED** — `tests/eval.test.mjs`, 17/17; found D11-1/D11-2 |
 | DA-1 canonical serialisation for hashing | P4 | **CLOSED** (APR-P4-001) |
 | DA-2 scenarios persist input snapshot | P4 | **CLOSED** (APR-P4-001) |
 | SAP-1 no integration claim without evidence | P7 | **OPEN BY DESIGN** — no unsupported claim exists anywhere (APR-P7-001); closes only when a redacted real request/response is attached |
@@ -75,7 +75,7 @@ resolution required.
 | R0-3 | Proprietary fonts unavailable | MEDIUM | P8 | OPEN — open-source substitute permitted |
 | AR-R1 | Agents look decorative | MEDIUM | P6/P8 | OPEN — condition CA-2 |
 | AR-R2 | Hash chain never verified | MEDIUM | P10 | **CLOSED** — `tests/audit.test.mjs` REQ-083 ×2 |
-| AR-R3 | Policy becomes an if-ladder | MEDIUM | P12 | OPEN — REQ-041 |
+| AR-R3 | Policy becomes an if-ladder | MEDIUM | P12 | **CLOSED** — thresholds+rules are data in `policy.mjs`; `tests/governance.test.mjs` |
 | AR-R4 | Silent SAP fallback presented as live | HIGH | P7 | OPEN — REQ-072 |
 
 ## 6. Change Propagation Procedure (Master Prompt §27)

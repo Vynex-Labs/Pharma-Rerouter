@@ -24,7 +24,13 @@ const t0 = Date.now();
 const r = await runPipeline({
   db, ledger, provider, asOf: SEED_EPOCH,
   approval: approve
-    ? { approverIdentity: 'user:sofia', approvals: ['user:sofia', 'user:daniel'] }
+    ? {
+      approvals: [
+        { identity: 'user:ravi', role: 'SUPPLY_CHAIN_MANAGER', comments: 'Cover at WH-CENTRAL is the binding risk.' },
+        { identity: 'user:daniel', role: 'QUALITY_ASSURANCE', comments: 'Excursion budget acceptable for this lane.' },
+        { identity: 'user:sofia', role: 'FINANCE_APPROVER', comments: 'Air premium justified against stockout exposure.' },
+      ],
+    }
     : null,
 });
 const ms = Date.now() - t0;

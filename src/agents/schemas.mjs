@@ -27,6 +27,39 @@ const EVENT_TYPES = [
   'CAPACITY_LOSS', 'LABOUR_ACTION', 'UNKNOWN',
 ];
 
+/**
+ * AR-1 authority guard.
+ *
+ * D11-1: this was previously a hand-enumerated deny-list per schema, which missed
+ * `costDeltaMinor` (the actual field name used everywhere in the engine) and did not exist at all
+ * at the top level of the S3 schema. Enumerating forbidden names is a losing game — the list has
+ * to be re-derived every time a field is added.
+ *
+ * It is now pattern-based and shared: ANY key whose name suggests an authoritative supply-chain
+ * quantity is rejected wherever it appears. False positives are acceptable here; a false negative
+ * is a model-invented number reaching a ranking function.
+ */
+const AUTHORITATIVE_KEY = /(^|[a-z])(cost|price|eta|hours|risk|score|quantity|qty|units|days|cover|feasibilit|capacity|lead ?time|stock|inventory|shipment|order|facilit|lane)/i;
+
+/** Keys an agent IS allowed to use, despite matching the pattern above. */
+const AUTHORITY_ALLOWLIST = new Set([
+  'confidence', 'uncertainty', 'reasoning', 'rationale', 'strategy', 'intents',
+  'eventType', 'severity', 'geography', 'expectedDurationHours', 'text',
+]);
+
+export function assertNoAuthoritativeFields(out, where = 'output') {
+  const offending = Object.keys(out).filter(
+    (k) => !AUTHORITY_ALLOWLIST.has(k) && AUTHORITATIVE_KEY.test(k),
+  );
+  if (offending.length > 0) {
+    throw new ValidationError(
+      'SCHEMA_INVALID',
+      `AR-1 violation: agent may not supply authoritative field(s) ${offending.join(', ')} in ${where}`,
+      { forbidden: offending, where },
+    );
+  }
+}
+
 /** AI-1 / REQ-064 — every agent output must declare confidence AND uncertainty. */
 function requireUncertainty(out) {
   if (typeof out.confidence !== 'number' || out.confidence < 0 || out.confidence > 1) {
@@ -74,17 +107,7 @@ export function validateDisruptionClassification(out) {
   }
 
   // Reject any attempt to smuggle authoritative supply-chain values into the classification.
-  const forbidden = [
-    'affectedShipments', 'affectedOrders', 'affectedFacilities', 'daysOfCover',
-    'cost', 'costDelta', 'etaHours', 'riskScore', 'quantity', 'units', 'unitsAtRisk',
-  ].filter((k) => k in out);
-  if (forbidden.length) {
-    throw new ValidationError(
-      'SCHEMA_INVALID',
-      `AR-1 violation: agent attempted to supply authoritative field(s) ${forbidden.join(', ')}`,
-      { forbidden },
-    );
-  }
+  assertNoAuthoritativeFields(out, 'classification');
 
   return {
     eventType: out.eventType,
@@ -107,6 +130,7 @@ export function validateStrategyIntents(out, { knownStrategies }) {
     throw new ValidationError('SCHEMA_INVALID', 'output is not an object');
   }
   requireUncertainty(out);
+  assertNoAuthoritativeFields(out, 'strategy intents');
 
   if (!Array.isArray(out.intents) || out.intents.length === 0) {
     throw new ValidationError('SCHEMA_INVALID', 'intents must be a non-empty array');
@@ -135,6 +159,23 @@ export function validateStrategyIntents(out, { knownStrategies }) {
       strategy: intent.strategy,
       rationale: typeof intent.rationale === 'string' ? intent.rationale : null,
     });
+  }
+
+  /**
+   * D11-2: previously only an EMPTY accepted list was rejected, so a payload mixing one real
+   * strategy with one hallucinated one was accepted and the hallucination was quietly dropped.
+   * Partial acceptance lets a fabrication ride along with a valid item, and hides from the operator
+   * that the model invented something. Any invalid intent now invalidates the whole output.
+   */
+  if (rejected.length > 0) {
+    const authorityLeak = rejected.some((r) => r.reason === 'AR1_AUTHORITATIVE_FIELD');
+    throw new ValidationError(
+      authorityLeak ? 'SCHEMA_INVALID' : 'REFERENTIAL_INVALID',
+      authorityLeak
+        ? `AR-1 violation: agent may not supply authoritative field(s) in intents`
+        : `agent proposed ${rejected.length} invalid strategy intent(s); the output is rejected rather than partially accepted`,
+      { rejected, accepted: accepted.map((a) => a.strategy) },
+    );
   }
 
   if (accepted.length === 0) {

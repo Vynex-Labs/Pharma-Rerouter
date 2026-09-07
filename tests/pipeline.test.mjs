@@ -13,7 +13,8 @@ import { openDatabase } from '../src/db/index.mjs';
 import { seedDatabase, SEED_EPOCH } from '../src/db/seed.mjs';
 import { AuditLedger } from '../src/core/audit.mjs';
 import { MockProvider } from '../src/agents/provider.mjs';
-import { runPipeline, evaluatePolicyInterim, actionsFor } from '../src/core/pipeline.mjs';
+import { runPipeline, actionsFor } from '../src/core/pipeline.mjs';
+import { evaluatePolicy, POLICY_VERSION } from '../src/core/policy.mjs';
 import {
   DecisionMachine, StateTransitionError, canTransition, TRANSITIONS, STATES,
 } from '../src/core/statemachine.mjs';
@@ -21,7 +22,15 @@ import {
   mintAuthorization, executeDecision, validateAuthorization, AuthorizationError, ACTION_HANDLERS,
 } from '../src/core/execution.mjs';
 
-const APPROVAL = { approverIdentity: 'user:sofia', approvals: ['user:sofia', 'user:daniel'] };
+// The flagship decision requires three roles under the P12 policy engine (cold-chain excursion,
+// finance threshold, critical cover), satisfied by three distinct identities.
+const APPROVAL = {
+  approvals: [
+    { identity: 'user:ravi', role: 'SUPPLY_CHAIN_MANAGER' },
+    { identity: 'user:daniel', role: 'QUALITY_ASSURANCE' },
+    { identity: 'user:sofia', role: 'FINANCE_APPROVER' },
+  ],
+};
 
 function fresh() {
   const db = openDatabase(':memory:');
@@ -102,7 +111,7 @@ test('the flagship scenario runs detection through SEALED', async () => {
   assert.equal(r.state, 'SEALED');
   assert.deepEqual(r.trace.map((t) => t.step), [
     'DETECTED', 'IMPACT_ASSESSED', 'SCENARIOS_GENERATED', 'RANKED', 'POLICY_EVALUATED',
-    'PENDING_APPROVAL', 'APPROVED', 'EXECUTING', 'RECOVERY_VERIFIED', 'SEALED',
+    'PENDING_APPROVAL', 'APPROVAL_CAPTURED', 'APPROVED', 'EXECUTING', 'RECOVERY_VERIFIED', 'SEALED',
   ]);
   assert.equal(r.selected.strategyType, 'AIR_REROUTE');
   assert.equal(r.executed.outcome, 'SUCCESS');
@@ -331,15 +340,15 @@ test('REQ-054: a missed objective is recorded, not suppressed', async () => {
 
 // ------------------------------------------------------------------ policy seam (interim)
 
-test('the interim policy never returns AUTONOMOUS for the flagship, and blocks a blocked option', () => {
+test('the policy engine never returns AUTONOMOUS for the flagship, and blocks a blocked option', () => {
   const impact = { daysOfCover: [{ status: 'CRITICAL' }] };
   const blocked = { feasibility: 'BLOCKED', infeasibilityReason: 'Supplier not qualified for EU.' };
 
-  assert.equal(evaluatePolicyInterim(blocked, impact).autonomyClass, 'BLOCKED');
-  assert.equal(evaluatePolicyInterim(null, impact).autonomyClass, 'BLOCKED');
+  assert.equal(evaluatePolicy({ scenario: blocked, impact }).autonomyClass, 'BLOCKED');
+  assert.equal(evaluatePolicy({ scenario: null, impact }).autonomyClass, 'BLOCKED');
 
-  const ok = { feasibility: 'FEASIBLE', costDeltaMinor: 23_200_000 };
-  const verdict = evaluatePolicyInterim(ok, impact);
+  const ok = { strategyType: 'AIR_REROUTE', feasibility: 'FEASIBLE', costDeltaMinor: 23_200_000, riskScore: 32 };
+  const verdict = evaluatePolicy({ scenario: ok, impact });
   assert.equal(verdict.autonomyClass, 'APPROVAL_REQUIRED');
   assert.ok(verdict.requiredRoles.length >= 2, 'a critical, high-value action needs dual approval');
 });
@@ -351,6 +360,6 @@ test('policy evaluation is persisted with its version (REQ-041)', async () => {
 
   assert.ok(row, 'the evaluation must be stored');
   assert.equal(row.autonomy_class, 'APPROVAL_REQUIRED');
-  assert.match(row.policy_version, /interim-p9/);
+  assert.equal(row.policy_version, POLICY_VERSION);
   assert.ok(JSON.parse(row.required_roles_json).length >= 1);
 });

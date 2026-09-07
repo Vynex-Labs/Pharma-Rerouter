@@ -69,7 +69,7 @@ export function view(state) {
       state: state.state,
       trace: state.trace,
       policy: state.policy,
-      policyVersion: state.policy ? 'interim-p9-0.1.0' : null,
+      policyVersion: state.policy ? (state.policyVersion ?? state.policy.policyVersion ?? null) : null,
       actions: state.actions,
       executed: state.executed
         ? { outcome: state.executed.outcome, at: state.executed.executed_at,
