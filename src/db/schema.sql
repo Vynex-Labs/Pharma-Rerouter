@@ -299,7 +299,12 @@ CREATE TABLE IF NOT EXISTS agent_invocation (
                        ('VALID','SCHEMA_INVALID','REFERENTIAL_INVALID','PROVIDER_ERROR')),
   confidence         REAL,
   uncertainty        TEXT,
-  fallback_used      INTEGER NOT NULL DEFAULT 0 CHECK (fallback_used IN (0,1))
+  fallback_used      INTEGER NOT NULL DEFAULT 0 CHECK (fallback_used IN (0,1)),
+  -- D8-1: a record claiming VALID + fallback_used=1 must be able to say WHY.
+  fallback_reason    TEXT CHECK (fallback_reason IN
+                       ('PROVIDER_ERROR','SCHEMA_INVALID','REFERENTIAL_INVALID','EMPTY_OUTPUT')),
+  attempts           INTEGER NOT NULL DEFAULT 1 CHECK (attempts >= 1),
+  CHECK (fallback_used = 0 OR fallback_reason IS NOT NULL)
 ) STRICT;
 
 CREATE TABLE IF NOT EXISTS guardrail_event (

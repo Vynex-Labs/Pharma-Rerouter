@@ -17,10 +17,10 @@ signed, and no Critical/High blocker it owns remains open (Master Prompt §21).
 | P3 | Requirements | P2 | **PASSED** | Requirements Manager | Product Manager, System Architect |
 | P4 | Data Architecture | P3 | **PASSED** | Data Architect | Backend, Domain Expert |
 | P5 | Deterministic Core | P4 | **PASSED** | Optimization Engineer | Backend, QA |
-| P6 | AI / Agent Layer | P5 | **NOT STARTED** (unblocked — next) | AI Architect | AI Evaluation, Safety/Governance |
-| P7 | SAP Integration | P2, P3, P4 | NOT STARTED (unblocked) | SAP Integration Engineer | SAP Strategy, System Architect |
-| P8 | UI / UX | P2, P3 | NOT STARTED (may run parallel to P4–P7) | UI/UX Designer | Visual QA, Product Manager |
-| P9 | End-to-End Integration | P5, P6, P7, P8 | NOT STARTED | Master Orchestrator | Backend, Frontend, QA |
+| P6 | AI / Agent Layer | P5 | **COMPLETE** (APR-P6-001) | AI Architect | AI Evaluation, Safety/Governance |
+| P7 | SAP Integration | P2, P3, P4 | **COMPLETE WITH CONDITION** (APR-P7-001) | SAP Integration Engineer | SAP Strategy, System Architect |
+| P8 | UI / UX | P2, P3 | **COMPLETE** (APR-P8-001) | UI/UX Designer | Visual QA, Product Manager |
+| P9 | End-to-End Integration | P5, P6, P7, P8 | **NOT STARTED** (unblocked — next) | Master Orchestrator | Backend, Frontend, QA |
 | P10 | Testing | P9 | NOT STARTED | QA Engineer | Master Orchestrator |
 | P11 | AI Evaluation | P6, P9 | NOT STARTED | AI Evaluation Engineer | AI Architect, Safety/Governance |
 | P12 | Security & Governance | P2, P6, P7, P9 | NOT STARTED | Security Engineer | Safety/Governance, System Architect |
@@ -34,7 +34,7 @@ signed, and no Critical/High blocker it owns remains open (Master Prompt §21).
 | P20 | Presentation | P19 | NOT STARTED | PPT Designer | Pitch Strategist, Competition Analyst |
 | P21 | Final Release | P10–P20 | NOT STARTED | Master Orchestrator | Auditor, Security, Governance, SAP, QA |
 
-**Critical path (P4, P5 done):** P6 → P6 → P9 → {P10 ∥ P11 ∥ P12} → P13 → P14 → P15 → P16 → P17 → P18 → P19 → P20 → P21.
+**Critical path (P0–P8 done):** P9 → {P10 ∥ P11 ∥ P12} → P13 → P14 → P15 → P16 → P17 → P18 → P19 → P20 → P21.
 
 ## 2. Permitted Parallelism (Master Prompt §20)
 - **P8 (UI/UX)** may start now — its dependencies P2 and P3 have both passed. It must not consume
@@ -48,16 +48,16 @@ Carried from `docs/P2-architecture-review.md`. A phase may not pass while holdin
 
 | Condition | Owner | Status |
 |---|---|---|
-| PM-1 computed vs generated text visually distinct | P8 | OPEN |
+| PM-1 computed vs generated text visually distinct | P8 | **CLOSED** (APR-P8-001) |
 | DE-1 cold-chain feasibility is a hard gate | P5 | **CLOSED** (APR-P5-001) |
 | DE-2 supplier qualification can BLOCK | P5 | **CLOSED** (APR-P5-001) |
-| AI-1 confidence + uncertainty mandatory | P6 | OPEN |
+| AI-1 confidence + uncertainty mandatory | P6 | **CLOSED** (APR-P6-001) |
 | AI-2 invalid agent output rejected (proven by eval) | P11 | OPEN |
-| DA-1 canonical serialisation for hashing | P4 | OPEN |
+| DA-1 canonical serialisation for hashing | P4 | **CLOSED** (APR-P4-001) |
 | DA-2 scenarios persist input snapshot | P4 | **CLOSED** (APR-P4-001) |
-| SAP-1 no integration claim without evidence | P7 | OPEN |
+| SAP-1 no integration claim without evidence | P7 | **OPEN BY DESIGN** — no unsupported claim exists anywhere (APR-P7-001); closes only when a redacted real request/response is attached |
 | SAP-2 fallback shown deliberately in demo | P18 | OPEN |
-| CA-2 scenario intents genuinely drive generation | P6 | OPEN |
+| CA-2 scenario intents genuinely drive generation | P6 | **CLOSED** (APR-P6-001) |
 
 ## 4. Blocked-Phase Register (Master Prompt §26)
 None currently. Entries require: blocked phase, blocking dependency, reason, impact, owner,

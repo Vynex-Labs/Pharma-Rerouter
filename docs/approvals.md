@@ -114,7 +114,7 @@ No approval records exist for P4–P21. P4 is unblocked and is the next phase.
 | Date/time | 2026-09-07 (UTC) |
 | Decision | **APPROVED** |
 | Acceptance criteria reviewed | "Flagship disruption can be represented completely" — satisfied; every element of P1 §8 maps to a table, verified by `tests/seed.test.mjs` REQ-102 |
-| Evidence reviewed | `docs/data-model.md`; `src/db/schema.sql` (22 tables, STRICT typing, append-only triggers); `src/core/canonical.mjs`; `src/core/audit.mjs`; `src/core/snapshot.mjs`; `src/db/seed.mjs`; **26/26 tests passing**; reproducible seed hash `673d8f1e…7cdaa2` |
+| Evidence reviewed | `docs/data-model.md`; `src/db/schema.sql` (22 tables, STRICT typing, append-only triggers); `src/core/canonical.mjs`; `src/core/audit.mjs`; `src/core/snapshot.mjs`; `src/db/seed.mjs`; **26/26 tests passing**; reproducible seed hash `673d8f1e…7cdaa2` (**superseded** — see note below) |
 | Conditions closed | **DA-1** — canonical serialisation specified and tested (key order, timezone, float, null/undefined, non-finite rejection). **DA-2** — `input_snapshot` implemented; scenarios and authorizations bind to `snapshot_hash`. |
 | Outstanding issues | REQ-072 and REQ-040 are PARTIAL pending P7/P12; `REQ-014` full determinism awaits the P5 engines |
 | Risk assessment | Acceptable. AR-R2 (hash chain never verified) is now **CLOSED** — two tests prove that mutating a payload or a chain hash is detected and the offending record is named. |
@@ -146,3 +146,95 @@ No approval records exist for P4–P21. P4 is unblocked and is the next phase.
 | Linked requirements | REQ-010–015, 020–028, NFR-001, NFR-003, NFR-004, NFR-008 |
 | Linked findings | D5-1 (HIGH), D5-2, D5-3, D5-4 — all fixed and regression-tested |
 | Comments | Four defects were found by the phase's own tests, and three were substantive rather than cosmetic. D5-1 is the most serious: the seed data could not exercise shelf-life netting, so REQ-012 had been passing against data that made the Domain Expert's binding P1 challenge unobservable — the requirement was verified in name only. D5-3 is the kind of scoring defect that survives to a live demo: the baseline was scoring 40/100 because "do nothing" was credited with zero cost and zero ETA. Both were caught only because the tests asserted on *outcomes the domain requires* rather than on function return shapes. |
+
+---
+
+## APR-P6-001
+
+| Field | Value |
+|---|---|
+| Phase | P6 — AI / Agent Layer |
+| Phase version | 1.0 |
+| Approver role | AI Architect (primary) |
+| Supporting review | AI Evaluation Engineer, Safety/Governance Officer |
+| Date/time | 2026-09-07 (UTC) |
+| Decision | **APPROVED** |
+| Acceptance criteria reviewed | "Agents have bounded authority enforced in code, not requested in prompts" — satisfied. Forbidden capabilities are absent from the tool registry entirely, so no name exists to call; no agent output schema contains a numeric supply-chain field. |
+| Evidence reviewed | `docs/agents.md`; `docs/P6-agent-layer.md`; four modules under `src/agents/`; **24 agent tests**, suite green at 110/110; injection test; CA-2 causality test comparing intent-driven vs exhaustive generation |
+| Conditions closed | **AI-1** — `confidence ∈ [0,1]` and a non-empty `uncertainty` string are required on every output including every fallback path, asserted per-seam and on every persisted row. **CA-2** — omitting `ALT_PORT` from agent intents removes it from the generated candidate set while every computed figure stays byte-identical, proving the agent changes *what is considered* and nothing about *what it is worth*. |
+| Outstanding issues | No real LLM has been exercised; `MockProvider` is the default and deliberately declines to write prose. AI-2 (invalid output rejection proven by systematic eval) remains open and is owned by P11. Injection resistance is shown against one crafted payload, not proven in general. |
+| Risk assessment | Acceptable. The load-bearing risk was authority creep — an agent gradually acquiring the ability to produce a number or trigger an action. Authority-by-absence makes that a schema change rather than a prompt change, so it cannot happen quietly. |
+| Linked artefacts | `src/agents/{provider,schemas,runtime,index}.mjs`, `docs/agents.md` |
+| Linked tests | `tests/agents.test.mjs` (24) |
+| Linked requirements | REQ-002, 003, 004, 005, 015, 026, 027, 060–067, 095, NFR-003, NFR-012 |
+| Linked findings | D6-1 (test defect), D6-2 (MEDIUM), D8-1 (MEDIUM) — all fixed and regression-tested |
+| Comments | D6-2 is the finding worth recording. `runAgent` treated schema-valid-but-empty output as success, so a provider returning `{text: null, confidence, uncertainty}` produced `ok: true` and persisted a null narrative — the UI would have rendered a blank explanation while the invocation record claimed success. **Valid is not the same as useful**, and a validator that only checks shape will not catch the difference. The related D8-1, found later while reading a live API response, is the same class of problem one level up: the record itself said `VALID / fallback_used=1 / reason=(none)`. A record that cannot explain its own fallback is not evidence, it is a rumour. Both are now enforced at the database boundary rather than by convention. |
+
+---
+
+## APR-P7-001
+
+| Field | Value |
+|---|---|
+| Phase | P7 — SAP Integration |
+| Phase version | 1.0 |
+| Approver role | SAP Integration Engineer (primary) |
+| Supporting review | SAP Strategy Advisor, System Architect |
+| Date/time | 2026-09-07 (UTC) |
+| Decision | **APPROVED WITH CONDITION** |
+| Acceptance criteria reviewed | "Genuine, non-faked SAP integration with honest labelling" — satisfied in the only form the environment permits: a real OData contract implementation with provenance that cannot lie. Connectivity is explicitly **not** claimed. |
+| Evidence reviewed | `docs/P7-sap-integration.md`; `src/sap/adapter.mjs`; `src/sap/fixtures.mjs`; **12 SAP tests**; published SAP API documentation for `API_MATERIAL_STOCK_SRV`, `API_MRP_MATERIALS_SRV_01`, `API_PRODUCT_SRV` |
+| Conditions closed | None. **SAP-1 remains OPEN BY DESIGN.** |
+| Outstanding issues | Zero verified round-trips against SAP — no API key is provisioned (assumption A-01). Fixtures prove field mapping against the published contract, not connectivity, and are named `SAP_SANDBOX_SHAPE_FIXTURE` to prevent that misreading. Adapter is read-only. |
+| Risk assessment | Acceptable, and the residual risk is disclosure rather than function. The dangerous failure mode for a hackathon is a green "Live SAP" badge over simulated numbers; the constructor makes that unreachable by downgrading `LIVE_SAP`/`SAP_SANDBOX` to `SIMULATED` whenever no key is present, so the badge is derived from the effective mode and never the requested one. |
+| Linked artefacts | `src/sap/adapter.mjs`, `src/sap/fixtures.mjs`, `docs/P7-sap-integration.md` |
+| Linked tests | `tests/sap.test.mjs` (12) |
+| Linked requirements | REQ-070–076 |
+| Linked findings | None new |
+| Comments | The honest position is that we have implemented an integration *contract*, not an integration. Approving this phase therefore required deciding what "genuine, non-faked" can mean without credentials. We settled on: the wire format must be real, the mapping must be tested against the published contract, the failure behaviour must be real, and the system must be structurally incapable of overstating what it has. A test asserts the forbidden phrasings — "Integrated with SAP", "live SAP data", "Powered by SAP AI Core" — appear nowhere in the adapter's own description. SAP-1 stays open because closing it would require evidence we do not have, and the condition exists precisely to stop us claiming otherwise. |
+
+---
+
+## APR-P8-001
+
+| Field | Value |
+|---|---|
+| Phase | P8 — Control Tower UI |
+| Phase version | 1.0 |
+| Approver role | UI/UX Designer (primary) |
+| Supporting review | Visual QA, Product Manager (condition owner) |
+| Date/time | 2026-09-07 (UTC) |
+| Decision | **APPROVED** |
+| Acceptance criteria reviewed | "UI follows the design system" — satisfied; every base token is asserted to appear verbatim in `DESIGN.md`, and the product-surface layer is additive and documented. "Operator can distinguish computed from generated" — satisfied via a single enforced render path. |
+| Evidence reviewed | `docs/design-extension.md`; `docs/P8-ui.md`; `src/ui/tokens.mjs`; `src/ui/public/*`; `src/api/server.mjs`; **11 design tests + 9 DOM render tests**; suite green at 110/110; measured contrast ratios all ≥ 4.5:1 |
+| Conditions closed | **PM-1** — model prose reaches the DOM through exactly one function, which applies a provenance border, recessed ink and an explicit `AI-generated` / `Template · deterministic` label. A test asserts the narrative never renders outside that block and that computed text is strictly more prominent while generated text stays AA-legible. |
+| Outstanding issues | No screenshot or visual-regression testing — the sandbox cannot download a browser binary (TLS restriction), so verification is DOM-level and does not cover pixel layout. The Approval Center is an intentional placeholder. Fonts load from Google Fonts. |
+| Risk assessment | Acceptable. The load-bearing risk was R0-2: inventing status colours ad hoc and drifting away from the design authority. Binding the tokens to a test that greps `DESIGN.md` means drift now breaks the build rather than accumulating silently. |
+| Linked artefacts | `src/ui/tokens.mjs`, `src/ui/public/{index.html,app.css,app.js}`, `src/api/server.mjs`, `docs/design-extension.md`, `docs/P8-ui.md` |
+| Linked tests | `tests/design.test.mjs` (11), `tests/ui.test.mjs` (9) |
+| Linked requirements | REQ-090–097, PM-1 |
+| Linked findings | D8-1 (MEDIUM), D8-2 (MEDIUM), D8-3 (LOW) — all fixed |
+| Comments | Two decisions are worth defending. First, the Approval Center renders a statement that it is blocked on P12 instead of a working-looking Approve button. A fake approval control is the single most misleading thing this UI could contain, because approval integrity is the project's central governance claim. Second, D8-2 was found the honest way — the server refused to start after a schema change, because `CREATE TABLE IF NOT EXISTS` had silently accepted a stale database and then failed deep inside an INSERT with "no column named fallback_reason". Rather than delete the file and move on, the failure now happens at open time and names both the missing columns and the fix. The original error pointed at the symptom; the guard points at the cause. |
+
+---
+
+## Note: snapshot hash supersession (recorded at P8)
+
+The P4 approval above cites snapshot hash `673d8f1e…7cdaa2`. That value is **no longer
+reproducible**, and the reason is recorded here rather than quietly overwritten.
+
+Defect **D5-1** (found at P5) showed the seed data could not exercise shelf-life netting:
+`LOT-C-002` held 5,000 units expiring at +6 days against 1,400 units/day of demand, so no
+write-off ever occurred and REQ-012 passed vacuously. The fixture was corrected to 20,000 units
+expiring at +3 days. Changing the fixture necessarily changes the canonical snapshot.
+
+| | Value |
+|---|---|
+| Superseded hash | `673d8f1e…7cdaa2` |
+| Current hash | `0dfe4d975c82cd743cb2905839e920bbd63d25e1206ee7ff54a077433a65a0b8` |
+| Cause | D5-1 seed correction (`src/db/seed.mjs`) |
+| Reproduce | `npm run seed` with `SEED=20260907` |
+| Verified at | P8, 2026-09-07 |
+
+The hash is still deterministic — re-running the seed reproduces `0dfe4d97…` exactly. What changed
+is the input, not the determinism guarantee (ADR-0005).

@@ -18,8 +18,39 @@ export function openDatabase(path = DEFAULT_DB_PATH) {
   const db = new Database(path);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
-  db.exec(readFileSync(SCHEMA_PATH, 'utf8'));
+
+  const schema = readFileSync(SCHEMA_PATH, 'utf8');
+  db.exec(schema);
+  assertSchemaCurrent(db, schema, path);
   return db;
+}
+
+/**
+ * D8-2: every CREATE TABLE is `IF NOT EXISTS`, so an on-disk database written before a schema
+ * change is silently accepted and then fails deep inside an INSERT ("no column named X") — far
+ * from the actual cause. We fail loudly at open time instead, with the fix in the message.
+ *
+ * This is a development-time drift guard, NOT a migration system. Real migrations arrive with P10.
+ */
+export function assertSchemaCurrent(db, schema, path) {
+  const drift = [];
+  const tableRe = /CREATE TABLE IF NOT EXISTS (\w+) \(([\s\S]*?)\n\) STRICT;/g;
+
+  for (const [, table, body] of schema.matchAll(tableRe)) {
+    const actual = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name));
+    if (actual.size === 0) continue;
+    for (const line of body.split('\n')) {
+      const m = /^\s{2}(\w+)\s+(TEXT|INTEGER|REAL|BLOB|ANY)\b/.exec(line);
+      if (m && !actual.has(m[1])) drift.push(`${table}.${m[1]}`);
+    }
+  }
+
+  if (drift.length > 0) {
+    throw new Error(
+      `Database schema is out of date at ${path}. Missing: ${drift.join(', ')}. ` +
+      `Delete the file and re-run \`npm run seed\` (the data is reproducible from SEED).`,
+    );
+  }
 }
 
 /** Drop all rows (not the schema) — used by the seeder and tests for a clean, reproducible state. */

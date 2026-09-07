@@ -11,19 +11,43 @@ SAP Hackfest 2026 · Theme 1: Resilient Supply Chains
 
 ## Current status
 
-**Phase P3 complete. No application code has been written yet — deliberately.**
-
-Phases P0–P3 (reconnaissance, problem definition, architecture, requirements) have passed their
-gates. Implementation begins at P4 (Data Architecture). See `docs/phase-plan.md` for live gate status.
+**Phases P0–P8 complete. The application runs. `npm test` → 110/110 passing.**
 
 | Phase | Status |
 |---|---|
 | P0 Repository Reconnaissance | PASSED |
 | P1 Problem Definition | PASSED |
-| P2 Architecture | PASSED (with conditions) |
+| P2 Architecture | PASSED (with 10 conditions) |
 | P3 Requirements | PASSED |
-| P4 Data Architecture | next |
-| P5–P21 | not started |
+| P4 Data Architecture | PASSED |
+| P5 Deterministic Core | PASSED |
+| P6 AI / Agent Layer | PASSED — closes AI-1, CA-2 |
+| P7 SAP Integration | PASSED WITH CONDITION — SAP-1 open by design |
+| P8 Control Tower UI | PASSED — closes PM-1 |
+| P9 End-to-End Integration | next |
+| P10–P21 | not started |
+
+7 of the 10 binding P2 conditions are closed. See `docs/phase-plan.md` for live gate status and
+`docs/approvals.md` for the approval evidence behind each.
+
+## Running it
+
+```bash
+npm install
+npm run seed     # deterministic; snapshot hash 0dfe4d97…a65a0b8
+npm run dev      # control tower on http://localhost:3000
+npm test         # 110 tests
+```
+
+Everything runs offline. The default LLM provider is a deterministic mock, and the SAP adapter
+runs in `SIMULATED` mode unless a real API key is supplied.
+
+### What actually works today
+Disruption sensing (agent) → deterministic impact assessment → agent-selected strategy generation →
+MCDA ranking with hard feasibility gates → hash-chained audit → eight-screen control tower.
+
+**Not yet built:** the approval workflow (P12), execution (P13) and recovery verification (P14).
+The Approval Center screen says so rather than showing a fake Approve button.
 
 ## The problem
 
@@ -63,9 +87,15 @@ See `docs/architecture.md` and `docs/ADR/`.
 This project follows a strict honesty contract (Master Prompt §30):
 
 - **Data is SYNTHETIC**, generated from a fixed seed, and labelled as such in the UI.
-- **SAP:** we implement the S/4HANA Cloud OData contract for material stock and carry a
-  `data_source` badge of `LIVE_SAP` / `SAP_SANDBOX` / `SIMULATED` on every derived figure. We will not
-  write "integrated with SAP" anywhere until P7 attaches request/response evidence.
+- **SAP: we have implemented an integration *contract*, not a verified integration.** The OData
+  service paths, entity sets, field mappings and both V2/V4 envelope shapes are real and tested
+  against SAP's published API documentation. **No request has ever been sent to SAP** — no API key
+  is provisioned. The adapter downgrades `LIVE_SAP`/`SAP_SANDBOX` to `SIMULATED` whenever no key is
+  present, so the badge cannot overstate what we have. The phrases "integrated with SAP", "live SAP
+  data" and "powered by SAP AI Core" appear nowhere, and a test enforces that.
+- **No real language model has been exercised.** The default provider is a deterministic mock that
+  declines to write prose, so narrative text comes from deterministic templates and the UI labels it
+  `Template · deterministic` rather than `AI-generated`.
 - **Audit integrity** is described as *tamper-evident, hash-chained* — never as blockchain or
   externally notarised.
 - **Carrier execution is simulated.** The UI says so.
@@ -81,15 +111,21 @@ This project follows a strict honesty contract (Master Prompt §30):
 | `docs/P1-problem-definition.md` | Problem, personas, journeys, failure modes, KPIs, scope, flagship scenario |
 | `docs/architecture.md` | Three candidate architectures, weighted comparison, selection, rules AR-1…AR-7 |
 | `docs/P2-architecture-review.md` | Six independent role evaluations, dissent, and the 10 binding conditions |
-| `docs/SRS.md` | 62 functional + 12 non-functional requirements |
+| `docs/SRS.md` | 75 functional + 12 non-functional requirements |
 | `docs/traceability.md` | Requirement → design → implementation → test → evidence |
 | `docs/phase-plan.md` | Gate status, dependencies, parallelism, risk register |
 | `docs/approvals.md` | Phase approval evidence records |
-| `docs/ADR/` | ADR-0001 architecture · 0002 AI boundary · 0003 governance · 0004 SAP strategy |
+| `docs/agents.md` | Agent specification — which seams are genuine agents, which are narration, and why |
+| `docs/design-extension.md` | Additive product-surface extension to `DESIGN.md` (resolves R0-2, R0-3) |
+| `docs/P5-deterministic-core.md`, `docs/P6-agent-layer.md`, `docs/P7-sap-integration.md`, `docs/P8-ui.md` | Phase output packages |
+| `docs/changelog.md` | Reverse-chronological, one entry per phase gate, with propagation records |
+| `docs/ADR/` | ADR-0001 architecture · 0002 AI boundary · 0003 governance · 0004 SAP strategy · 0005 determinism |
 
 ## Environment
 
-Node 22 · Python 3.11 available. Stack selection is a P4/P5 decision and is not yet fixed.
+Node ≥ 22, ESM throughout. Runtime dependency: `better-sqlite3` (pinned `^13.0.3`). Dev dependency:
+`jsdom`. No web framework — the API surface is small enough that adding one would be unjustified
+weight. Everything runs offline with no service to start.
 
 ## Repository conventions
 
