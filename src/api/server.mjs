@@ -15,13 +15,9 @@ import { fileURLToPath } from 'node:url';
 
 import { openDatabase, resetData, DEFAULT_DB_PATH } from '../db/index.mjs';
 import { seedDatabase, SEED_EPOCH } from '../db/seed.mjs';
-import { captureSnapshot } from '../core/snapshot.mjs';
-import { assessImpact } from '../core/impact.mjs';
-import { generateScenarios } from '../core/scenarios.mjs';
-import { rankScenarios } from '../core/scoring.mjs';
 import { AuditLedger } from '../core/audit.mjs';
+import { runPipeline } from '../core/pipeline.mjs';
 import { providerFromEnv } from '../agents/provider.mjs';
-import { senseDisruption, proposeStrategies, narrateImpact, orchestratorAdvice } from '../agents/index.mjs';
 import { adapterFromEnv } from '../sap/adapter.mjs';
 import { makeSimulator } from '../sap/fixtures.mjs';
 
@@ -29,7 +25,13 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(HERE, '..', 'ui', 'public');
 const MIME = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json' };
 
-export async function buildState({ dbPath = ':memory:', provider } = {}) {
+/**
+ * Boots the application state by running the REAL pipeline (P9).
+ *
+ * This previously re-implemented the flow inline, which meant the UI could drift away from the
+ * tested pipeline. There is now exactly one orchestration path, and the screens render its output.
+ */
+export async function buildState({ dbPath = ':memory:', provider, approval = null } = {}) {
   const db = openDatabase(dbPath);
   if (dbPath !== ':memory:') resetData(db);
   seedDatabase(db);
@@ -38,67 +40,53 @@ export async function buildState({ dbPath = ':memory:', provider } = {}) {
   const llm = provider ?? providerFromEnv();
   const sap = adapterFromEnv(process.env, { simulate: makeSimulator(db) });
 
-  const snapshot = captureSnapshot(db, { disruptionId: 'DSR-0001' });
-  const disruption = db.prepare("SELECT * FROM disruption_event WHERE id='DSR-0001'").get();
-
-  ledger.append({
-    eventType: 'DISRUPTION_DETECTED', actor: 'system:ingest',
-    payload: { disruptionId: disruption.id, laneId: disruption.reported_lane_id, snapshotHash: snapshot.snapshotHash },
+  const result = await runPipeline({
+    db, ledger, provider: llm, disruptionId: 'DSR-0001', asOf: SEED_EPOCH, approval,
   });
 
-  // S1 — sensing
-  const sensing = await senseDisruption({ provider: llm, disruption, snapshot: snapshot.payload, db });
-  db.prepare(
-    `UPDATE disruption_event SET event_type=?, severity=?, confidence=?, geography=?,
-       expected_duration_hours=?, classification_source=? WHERE id=?`,
-  ).run(
-    sensing.output.eventType, sensing.output.severity, sensing.output.confidence,
-    sensing.output.geography, sensing.output.expectedDurationHours,
-    sensing.ok ? 'AGENT' : 'DETERMINISTIC_FALLBACK', disruption.id,
-  );
-  const classified = db.prepare("SELECT * FROM disruption_event WHERE id='DSR-0001'").get();
-
-  // deterministic impact
-  const impact = assessImpact(snapshot.payload, classified, { asOf: SEED_EPOCH });
-  ledger.append({
-    eventType: 'IMPACT_ASSESSED', actor: 'engine:impact',
-    payload: {
-      ordersAtRisk: impact.ordersAtRisk.length,
-      shipmentsHeld: impact.affected.shipments.length,
-      earliestStockout: impact.baseline.earliestStockoutDate,
-    },
+  const stock = await sap.readMaterialStock({
+    material: '000000000000100001', plant: 'WH-CENTRAL',
   });
-
-  // S2 + S3
-  const narrative = await narrateImpact({ provider: llm, impact, snapshot: snapshot.payload, db });
-  const intents = await proposeStrategies({ provider: llm, impact, snapshot: snapshot.payload, db });
-
-  const gen = generateScenarios(impact, { asOf: SEED_EPOCH, strategyIntents: intents.output.intents });
-  const { ranked, excluded, weights } = rankScenarios(gen.scenarios);
-
-  ledger.append({
-    eventType: 'SCENARIOS_RANKED', actor: 'engine:scenario',
-    payload: {
-      generationOrigin: gen.generationOrigin,
-      ranked: ranked.map((s) => ({ id: s.id, strategy: s.strategyType, score: s.score })),
-      excluded: excluded.map((s) => ({ id: s.id, strategy: s.strategyType, feasibility: s.feasibility })),
-    },
-  });
-
-  const advice = orchestratorAdvice({ impact, ranked, excluded });
-  const stock = await sap.readMaterialStock({ material: '000000000000100001', plant: 'WH-CENTRAL' });
 
   return {
-    db, ledger, sap, llm,
-    snapshot, disruption: classified, impact, ranked, excluded, weights,
-    sensing, narrative, intents, gen, advice, stock,
+    db, ledger, sap, llm, stock,
+    ...result,
+    disruption: result.disruption,
+    sensing: result.agents.sensing,
+    narrative: result.agents.narrative,
+    intents: result.agents.intents,
+    advice: result.agents.advice,
+    explanation: result.agents.explanation,
   };
 }
 
-function view(state) {
+export function view(state) {
   const { impact, ranked, excluded, weights, snapshot } = state;
   return {
     generatedAt: new Date().toISOString(),
+    decision: {
+      id: state.decisionId,
+      state: state.state,
+      trace: state.trace,
+      policy: state.policy,
+      policyVersion: state.policy ? 'interim-p9-0.1.0' : null,
+      actions: state.actions,
+      executed: state.executed
+        ? { outcome: state.executed.outcome, at: state.executed.executed_at,
+            changes: JSON.parse(state.executed.changes_json) }
+        : null,
+      recovery: state.recovery
+        ? { objectiveMet: state.recovery.objective_met === 1,
+            checks: JSON.parse(state.recovery.notes),
+            before: JSON.parse(state.recovery.before_json),
+            after: JSON.parse(state.recovery.after_json) }
+        : null,
+      explanation: state.explanation
+        ? { text: state.explanation.output.text,
+            source: state.explanation.usedFallback ? 'TEMPLATE' : 'AI-GENERATED',
+            uncertainty: state.explanation.output.uncertainty }
+        : null,
+    },
     dataClassification: 'SYNTHETIC',
     dataSource: state.stock.dataSource,
     sap: state.sap.describe(),

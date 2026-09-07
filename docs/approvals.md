@@ -218,6 +218,29 @@ No approval records exist for P4–P21. P4 is unblocked and is the next phase.
 
 ---
 
+## APR-P9-001
+
+| Field | Value |
+|---|---|
+| Phase | P9 — End-to-End Integration |
+| Phase version | 1.0 |
+| Approver role | Master Orchestrator (primary) |
+| Supporting review | Backend Engineer, Frontend Engineer, QA Engineer |
+| Date/time | 2026-09-07 (UTC) |
+| Decision | **APPROVED** |
+| Acceptance criteria reviewed | "The full flow runs end to end with every step audited" — satisfied. `npm run demo -- --approve` runs DETECTED through SEALED in 25 ms with a valid hash chain over 13 events. |
+| Evidence reviewed | `docs/P9-end-to-end.md`; `src/core/{statemachine,execution,persist,pipeline}.mjs`; **24 pipeline tests**; suite green at **134/134**; demo transcript |
+| Conditions closed | None new. No open condition is owned by P9. |
+| Outstanding issues | The policy engine is interim (`interim-p9-0.1.0`) and exercises the spine only. Approval capture — identity, role verification, self-approval prevention, stale-approval invalidation — does not exist and is owned by P12. Only the flagship disruption is exercised end to end. |
+| Risk assessment | Acceptable. The load-bearing risk was a pipeline that appears to work because each stage is tested in isolation while the joins between them are wrong. Two HIGH defects of exactly that kind were found and fixed. |
+| Linked artefacts | `src/core/statemachine.mjs`, `src/core/execution.mjs`, `src/core/persist.mjs`, `src/core/pipeline.mjs`, `scripts/demo.mjs` |
+| Linked tests | `tests/pipeline.test.mjs` (24) |
+| Linked requirements | REQ-024, 039, 041, 050–055, DA-2 |
+| Linked findings | D9-1 (HIGH), D9-2 (HIGH), D9-3 (MEDIUM), D9-4 (test defect) — all fixed |
+| Comments | D9-2 is the finding that justifies this phase existing. Recovery verification reused the do-nothing cover basis, which counts no inbound stock, so orders-at-risk read 4 before and 4 after a successful reroute — the objective was reported as missed regardless of what execution actually achieved. **A verification step whose result is independent of the action being verified is not a verification step**, and every stage-level test still passed while it was broken. D9-1 was the same class: `actionsFor` re-derived the action list instead of using the engine's own output, so the actions that would have executed were not the actions that had been scored. Both were only visible by running the whole flow and asking whether the numbers moved. The related decision to measure recovery against the selected scenario's own prediction rather than an ideal makes the ranking model falsifiable — the engine predicted 2 residual at-risk orders and execution delivered 1, which is a claim that could have come out the other way. |
+
+---
+
 ## Note: snapshot hash supersession (recorded at P8)
 
 The P4 approval above cites snapshot hash `673d8f1e…7cdaa2`. That value is **no longer

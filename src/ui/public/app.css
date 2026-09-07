@@ -77,6 +77,10 @@ h2 { font-family: var(--font-display); font-size: 20px; font-weight: 500;
 .pill.healthy  { color: var(--healthy);  background: var(--healthy-dim);  border-color: var(--healthy); }
 .pill.info     { color: var(--info);     background: var(--info-dim);     border-color: var(--info); }
 .pill.neutral  { color: var(--ink-subtle); }
+/* Timeline pills need explicit rhythm; inline-flex siblings otherwise read as one run of text. */
+.timeline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.timeline .pill { white-space: nowrap; }
+.timeline .sep { color: var(--ink-tertiary); font-size: 11px; }
 
 /* ---------------------------------------------------------------- metrics */
 .metric { background: var(--surface-1); border: 1px solid var(--hairline);

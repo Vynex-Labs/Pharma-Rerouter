@@ -243,16 +243,89 @@ const fig = (k, v) => `<div class="fig"><div class="k">${esc(k)}</div><div class
 
 // ------------------------------------------------------------------ approvals
 function approvals() {
+  const d = S.decision;
+  const p = d.policy ?? {};
+  const pending = d.state === 'PENDING_APPROVAL';
+
   return `
   <div class="page-head"><h1>Approval Center</h1>
-    <p class="sub">Policy engine and approval workflow are implemented in P12.</p></div>
+    <p class="sub">Decision ${esc(d.id)} · state
+      <strong>${esc(d.state)}</strong> · policy ${esc(d.policyVersion ?? '—')}</p></div>
+
+  ${timeline(d)}
+
+  <div class="card" style="margin-top:24px">
+    <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:16px">
+      <span class="scenario-name">Requested action</span>
+      ${pill(p.autonomyClass === 'BLOCKED' ? 'BLOCKED' : 'WARNING', esc(p.autonomyClass ?? '—'))}
+    </div>
+    <table><tbody>
+      ${row('Strategy', S.scenarios.ranked[0]?.strategyType ?? '—')}
+      ${row('Bounded actions', d.actions.length + ' × ' + (d.actions[0]?.type ?? 'none'))}
+      ${row('Required roles', (p.requiredRoles ?? []).join(' + ') || 'none')}
+      ${row('Reason', p.reason ?? '—')}
+    </tbody></table>
+  </div>
+
+  ${d.explanation ? `<h2>Evidence for the approver</h2><div class="card">
+    ${generated(d.explanation.text, d.explanation.source, d.explanation.uncertainty)}</div>` : ''}
+
+  <h2>Approval capture</h2>
   <div class="card">
-    <p style="margin-top:0">This screen is intentionally not simulated. The governance model
-    (ADR-0003) specifies a full evidence contract, multi-role routing and stale-approval
-    invalidation. Showing a fake "Approve" button before that exists would misrepresent the
-    system's maturity.</p>
-    <p class="mono-sm">Blocked on: P12 — Security &amp; Governance.</p>
-  </div>`;
+    ${pending ? `
+      <p style="margin-top:0">This decision is genuinely waiting for
+      <strong>${esc((p.requiredRoles ?? []).join(' and '))}</strong>. The pipeline has halted here —
+      nothing has executed, and no authorization has been minted.</p>
+      <p class="mono-sm">Approval capture (identity, role verification, the full evidence contract,
+      self-approval prevention and stale-approval invalidation) is <strong>P12</strong>. Until that
+      exists there is deliberately no Approve button: a control that recorded a bare
+      <code>approved = true</code> would misrepresent the governance model this project is built on.</p>`
+    : `<p style="margin-top:0">This run supplied approval evidence programmatically, so the pipeline
+       continued through execution and recovery verification. The state is
+       <strong>${esc(d.state)}</strong>.</p>`}
+  </div>
+
+  ${d.executed ? `<h2>Execution</h2><div class="card">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      ${pill(d.executed.outcome === 'SUCCESS' ? 'HEALTHY' : 'CRITICAL', esc(d.executed.outcome))}
+      ${pill('WARNING', 'Simulated — no carrier contacted')}
+    </div>
+    <table><thead><tr><th>Entity</th><th>Before</th><th>After</th></tr></thead><tbody>
+      ${d.executed.changes.changes.map((c) => `<tr>
+        <td class="num">${esc(c.id)}</td>
+        <td class="num">${esc(c.before.lane_id ?? c.before.facility ?? '—')}</td>
+        <td class="num">${esc(c.after.lane_id ?? 'transferred')}</td></tr>`).join('')}
+    </tbody></table></div>` : ''}
+
+  ${d.recovery ? `<h2>Recovery verification</h2><div class="card">
+    ${pill(d.recovery.objectiveMet ? 'HEALTHY' : 'CRITICAL',
+           d.recovery.objectiveMet ? 'Objective met' : 'Objective missed')}
+    <table style="margin-top:12px"><thead><tr><th>Check</th><th>Target</th><th>Actual</th><th></th></tr></thead>
+    <tbody>${d.recovery.checks.map((c) => `<tr>
+      <td>${esc(c.name)}</td><td class="num">${c.target}</td><td class="num">${c.actual}</td>
+      <td>${pill(c.met ? 'HEALTHY' : 'CRITICAL', c.met ? 'Met' : 'Missed')}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="mono-sm" style="margin-top:12px">Target is the selected scenario's own prediction,
+      so the ranking model is falsifiable rather than self-confirming.</div>
+  </div>` : ''}`;
+}
+
+/** Renders the state machine as a progress timeline. */
+function timeline(d) {
+  const ALL = ['DETECTED', 'IMPACT_ASSESSED', 'SCENARIOS_GENERATED', 'RANKED', 'POLICY_EVALUATED',
+    'PENDING_APPROVAL', 'APPROVED', 'EXECUTING', 'RECOVERY_VERIFIED', 'SEALED'];
+  const done = new Set(d.trace.map((t) => t.step));
+  const isBlocked = d.state === 'BLOCKED';
+
+  return `<div class="card"><div class="timeline">
+    ${ALL.map((st) => {
+      const reached = done.has(st);
+      const current = d.state === st;
+      return `<span class="pill ${current ? (isBlocked ? 'critical' : 'info')
+        : reached ? 'healthy' : 'neutral'}"
+        style="${reached || current ? '' : 'opacity:.45'}">${esc(st.replace(/_/g, ' '))}</span>`;
+    }).join('')}
+  </div></div>`;
 }
 
 // ------------------------------------------------------------------ agents

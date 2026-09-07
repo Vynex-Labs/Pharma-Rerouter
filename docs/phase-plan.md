@@ -20,10 +20,10 @@ signed, and no Critical/High blocker it owns remains open (Master Prompt §21).
 | P6 | AI / Agent Layer | P5 | **COMPLETE** (APR-P6-001) | AI Architect | AI Evaluation, Safety/Governance |
 | P7 | SAP Integration | P2, P3, P4 | **COMPLETE WITH CONDITION** (APR-P7-001) | SAP Integration Engineer | SAP Strategy, System Architect |
 | P8 | UI / UX | P2, P3 | **COMPLETE** (APR-P8-001) | UI/UX Designer | Visual QA, Product Manager |
-| P9 | End-to-End Integration | P5, P6, P7, P8 | **NOT STARTED** (unblocked — next) | Master Orchestrator | Backend, Frontend, QA |
-| P10 | Testing | P9 | NOT STARTED | QA Engineer | Master Orchestrator |
-| P11 | AI Evaluation | P6, P9 | NOT STARTED | AI Evaluation Engineer | AI Architect, Safety/Governance |
-| P12 | Security & Governance | P2, P6, P7, P9 | NOT STARTED | Security Engineer | Safety/Governance, System Architect |
+| P9 | End-to-End Integration | P5, P6, P7, P8 | **COMPLETE** (APR-P9-001) | Master Orchestrator | Backend, Frontend, QA |
+| P10 | Testing | P9 | **NOT STARTED** (unblocked — next) | QA Engineer | Master Orchestrator |
+| P11 | AI Evaluation | P6, P9 | **NOT STARTED** (unblocked) | AI Evaluation Engineer | AI Architect, Safety/Governance |
+| P12 | Security & Governance | P2, P6, P7, P9 | **NOT STARTED** (unblocked) | Security Engineer | Safety/Governance, System Architect |
 | P13 | Independent Audit | P10, P11, P12 | NOT STARTED | Independent Auditor | (findings not alterable by Orchestrator) |
 | P14 | Red Team | P13 | NOT STARTED | Red Team | Independent Auditor, Security |
 | P15 | Documentation & Records | P13, P14 | NOT STARTED | Engineering Records Manager | Master Orchestrator |
@@ -34,7 +34,7 @@ signed, and no Critical/High blocker it owns remains open (Master Prompt §21).
 | P20 | Presentation | P19 | NOT STARTED | PPT Designer | Pitch Strategist, Competition Analyst |
 | P21 | Final Release | P10–P20 | NOT STARTED | Master Orchestrator | Auditor, Security, Governance, SAP, QA |
 
-**Critical path (P0–P8 done):** P9 → {P10 ∥ P11 ∥ P12} → P13 → P14 → P15 → P16 → P17 → P18 → P19 → P20 → P21.
+**Critical path (P0–P9 done):** {P10 ∥ P11 ∥ P12} → P13 → P14 → P15 → P16 → P17 → P18 → P19 → P20 → P21.
 
 ## 2. Permitted Parallelism (Master Prompt §20)
 - **P8 (UI/UX)** may start now — its dependencies P2 and P3 have both passed. It must not consume

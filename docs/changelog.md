@@ -6,6 +6,45 @@ workflow must appear here together with its propagation record (Master Prompt §
 
 ---
 
+## [0.5.0] — 2026-09-07 — Phase P9: End-to-End Integration
+
+### Added
+- `src/core/statemachine.mjs` — 12-state decision machine with an allow-list transition graph,
+  optimistic concurrency (F-8) and audit on every transition.
+- `src/core/execution.mjs` — single-use hash-bound `ExecutionAuthorization`, a bounded action
+  handler table, consume-then-write transactional execution, and recovery verification.
+- `src/core/persist.mjs` — persistence for computed impact and scenarios (closes defect D9-3).
+- `src/core/pipeline.mjs` — the orchestrator; halts at PENDING_APPROVAL unless approval evidence
+  is supplied. Includes `evaluatePolicyInterim`, explicitly named so it cannot be mistaken for the
+  P12 policy engine.
+- `scripts/demo.mjs` / `npm run demo` — end-to-end demo transcript.
+- `tests/pipeline.test.mjs` (24). Suite now **134/134**.
+- Approval Center screen now renders the real state machine, pending decision, required roles and
+  (when executed) execution changes and recovery checks.
+
+### Changed
+- `src/api/server.mjs` — `buildState()` now runs the real pipeline instead of re-implementing the
+  flow inline, removing a UI/pipeline drift risk. `view()` is exported so the UI tests consume the
+  server's actual response shape rather than a parallel copy.
+- `src/core/impact.mjs` — new `countInbound` option (defect D9-2). Baseline semantics unchanged.
+- `docs/phase-plan.md`, `docs/traceability.md`, `docs/approvals.md` (APR-P9-001), `README.md`.
+
+### Fixed
+- **D9-1 (HIGH)** executed actions were re-derived rather than taken from the engine, so they
+  diverged from the scored actions. Handlers now validate fields and name what is missing.
+- **D9-2 (HIGH)** recovery verification could not respond to the execution it was verifying.
+- **D9-3 (MEDIUM)** computed impact and scenarios were never persisted.
+- **D9-4** test defect: asserted derived `HELD` status as persisted fact.
+
+### Conditions
+No new conditions closed. AI-2 (P11), SAP-1 (open by design), SAP-2 (P18) remain.
+
+### Known limitations
+- The policy engine is interim; approval capture does not exist (both P12).
+- Execution is simulated; only the flagship disruption runs end to end.
+
+---
+
 ## [0.4.0] — 2026-09-07 — Phases P6, P7, P8 (run in parallel)
 
 ### Added

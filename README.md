@@ -11,7 +11,7 @@ SAP Hackfest 2026 · Theme 1: Resilient Supply Chains
 
 ## Current status
 
-**Phases P0–P8 complete. The application runs. `npm test` → 110/110 passing.**
+**Phases P0–P9 complete. The full flow runs end to end. `npm test` → 134/134 passing.**
 
 | Phase | Status |
 |---|---|
@@ -24,8 +24,9 @@ SAP Hackfest 2026 · Theme 1: Resilient Supply Chains
 | P6 AI / Agent Layer | PASSED — closes AI-1, CA-2 |
 | P7 SAP Integration | PASSED WITH CONDITION — SAP-1 open by design |
 | P8 Control Tower UI | PASSED — closes PM-1 |
-| P9 End-to-End Integration | next |
-| P10–P21 | not started |
+| P9 End-to-End Integration | PASSED |
+| P10 Testing · P11 AI Evaluation · P12 Governance | next (may run in parallel) |
+| P13–P21 | not started |
 
 7 of the 10 binding P2 conditions are closed. See `docs/phase-plan.md` for live gate status and
 `docs/approvals.md` for the approval evidence behind each.
@@ -36,18 +37,33 @@ SAP Hackfest 2026 · Theme 1: Resilient Supply Chains
 npm install
 npm run seed     # deterministic; snapshot hash 0dfe4d97…a65a0b8
 npm run dev      # control tower on http://localhost:3000
-npm test         # 110 tests
+npm run demo     # end-to-end transcript (add -- --approve to run through execution)
+npm test         # 134 tests
 ```
 
 Everything runs offline. The default LLM provider is a deterministic mock, and the SAP adapter
 runs in `SIMULATED` mode unless a real API key is supplied.
 
 ### What actually works today
-Disruption sensing (agent) → deterministic impact assessment → agent-selected strategy generation →
-MCDA ranking with hard feasibility gates → hash-chained audit → eight-screen control tower.
+The complete spine, verified end to end in 25 ms:
 
-**Not yet built:** the approval workflow (P12), execution (P13) and recovery verification (P14).
-The Approval Center screen says so rather than showing a fake Approve button.
+```
+DETECTED → IMPACT_ASSESSED → SCENARIOS_GENERATED → RANKED → POLICY_EVALUATED
+        → PENDING_APPROVAL → APPROVED → EXECUTING → RECOVERY_VERIFIED → SEALED
+```
+
+Disruption sensing (agent) → deterministic impact → agent-selected strategy generation → MCDA
+ranking with hard feasibility gates → bounded execution behind a single-use, hash-bound
+authorization → recovery verification measured against the selected scenario's own prediction →
+hash-chained audit → eight-screen control tower.
+
+Flagship run: 4 orders at risk → **1** after execution, recovery objective met, chain valid.
+
+**Not yet built: approval capture (P12).** The pipeline genuinely halts at `PENDING_APPROVAL` —
+nothing executes and no authorization is minted without approval evidence. There is no Approve
+button, because identity checks, role verification, self-approval prevention and stale-approval
+invalidation do not exist yet. The policy engine in use is an interim one named
+`evaluatePolicyInterim` so it cannot be mistaken for the real thing.
 
 ## The problem
 
@@ -117,7 +133,7 @@ This project follows a strict honesty contract (Master Prompt §30):
 | `docs/approvals.md` | Phase approval evidence records |
 | `docs/agents.md` | Agent specification — which seams are genuine agents, which are narration, and why |
 | `docs/design-extension.md` | Additive product-surface extension to `DESIGN.md` (resolves R0-2, R0-3) |
-| `docs/P5-deterministic-core.md`, `docs/P6-agent-layer.md`, `docs/P7-sap-integration.md`, `docs/P8-ui.md` | Phase output packages |
+| `docs/P5-deterministic-core.md` … `docs/P9-end-to-end.md` | Phase output packages |
 | `docs/changelog.md` | Reverse-chronological, one entry per phase gate, with propagation records |
 | `docs/ADR/` | ADR-0001 architecture · 0002 AI boundary · 0003 governance · 0004 SAP strategy · 0005 determinism |
 

@@ -12,7 +12,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
-import { buildState } from '../src/api/server.mjs';
+import { buildState, view } from '../src/api/server.mjs';
 
 const PAGES = ['dashboard', 'network', 'incident', 'scenarios', 'approvals', 'agents', 'inventory', 'audit'];
 const read = (p) => readFileSync(new URL(`../src/ui/public/${p}`, import.meta.url), 'utf8');
@@ -21,7 +21,7 @@ const read = (p) => readFileSync(new URL(`../src/ui/public/${p}`, import.meta.ur
 async function mount() {
   const state = await buildState();
   const payload = {
-    '/api/state': JSON.parse(JSON.stringify(viewOf(state))),
+    '/api/state': JSON.parse(JSON.stringify(view(state))),
     '/api/agents': {
       invocations: state.db.prepare('SELECT * FROM agent_invocation ORDER BY started_at').all(),
       guardrails: state.db.prepare('SELECT * FROM guardrail_event').all(),
@@ -39,53 +39,6 @@ async function mount() {
   window.eval(`${src}\n;window.__go=async(p)=>{page=p;renderNav();render();};`);
   await new Promise((r) => setTimeout(r, 250));
   return { window, state, payload };
-}
-
-// The server's private view() is not exported; re-derive the same shape via the HTTP layer instead.
-function viewOf(state) {
-  return JSON.parse(JSON.stringify({
-    generatedAt: new Date().toISOString(),
-    dataClassification: 'SYNTHETIC',
-    dataSource: state.stock.dataSource,
-    sap: state.sap.describe(),
-    llm: { provider: state.llm.name, model: state.llm.model },
-    disruption: {
-      id: state.disruption.id, laneId: state.disruption.reported_lane_id,
-      eventType: state.disruption.event_type, severity: state.disruption.severity,
-      confidence: state.disruption.confidence, geography: state.disruption.geography,
-      expectedDurationHours: state.disruption.expected_duration_hours,
-      classificationSource: state.disruption.classification_source,
-      uncertainty: state.sensing.output.uncertainty,
-      advisoryText: state.disruption.raw_advisory_text,
-    },
-    narrative: {
-      text: state.narrative.output.text,
-      source: state.narrative.usedFallback ? 'TEMPLATE' : 'AI-GENERATED',
-      uncertainty: state.narrative.output.uncertainty,
-    },
-    impact: {
-      closedLaneId: state.impact.closedLaneId,
-      shipmentsHeld: state.impact.affected.shipments,
-      facilities: state.impact.affected.facilities,
-      ordersAtRisk: state.impact.ordersAtRisk,
-      daysOfCover: state.impact.daysOfCover,
-      baseline: state.impact.baseline,
-    },
-    scenarios: {
-      ranked: state.ranked, excluded: state.excluded,
-      weights: state.weights, generationOrigin: state.gen.generationOrigin,
-    },
-    agents: {
-      intents: state.intents.output.intents,
-      rejected: state.intents.output.rejected ?? [], advice: state.advice,
-    },
-    network: {
-      facilities: state.snapshot.payload.facilities,
-      lanes: state.snapshot.payload.lanes.map((l) => ({
-        ...l, status: l.id === state.impact.closedLaneId ? 'CLOSED' : l.status,
-      })),
-    },
-  }));
 }
 
 test('REQ-090: every page renders substantive content', async () => {
@@ -140,11 +93,35 @@ test('REQ-024: excluded scenarios stay visible with their reasons', async () => 
 });
 
 test('the approval screen refuses to fake an unbuilt workflow', async () => {
-  const { window } = await mount();
+  const { window, payload } = await mount();
+  await window.__go('approvals');
+  const app = window.document.getElementById('app');
+  const text = app.textContent;
+
+  assert.equal(payload['/api/state'].decision.state, 'PENDING_APPROVAL');
+  assert.match(text, /P12/, 'must name the phase it is blocked on');
+  assert.match(text, /nothing has executed/i, 'must state that no execution occurred');
+
+  // No control that could be mistaken for a working approval.
+  const buttons = [...app.querySelectorAll('button')].map((b) => b.textContent.toLowerCase());
+  assert.ok(!buttons.some((t) => /approve|reject|authorise|authorize/.test(t)),
+    'no approve/reject control may exist before P12 implements approval capture');
+});
+
+test('P9: the approval screen renders the real state machine and the pending decision', async () => {
+  const { window, payload } = await mount();
   await window.__go('approvals');
   const text = window.document.getElementById('app').textContent;
-  assert.match(text, /P12/, 'must name the phase it is blocked on');
-  assert.equal(window.document.querySelectorAll('button.approve').length, 0);
+  const d = payload['/api/state'].decision;
+
+  assert.match(text, new RegExp(d.id), 'the decision id must be shown');
+  for (const step of ['DETECTED', 'RANKED', 'POLICY EVALUATED', 'PENDING APPROVAL', 'SEALED']) {
+    assert.ok(text.includes(step), `the timeline must show ${step}`);
+  }
+  for (const role of d.policy.requiredRoles) {
+    assert.ok(text.includes(role), `required approver role ${role} must be visible`);
+  }
+  assert.ok(d.actions.length > 0, 'the bounded action list must be populated');
 });
 
 test('REQ-095: the agent screen shows fallbacks with their reason, not just a flag', async () => {

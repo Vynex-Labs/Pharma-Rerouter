@@ -29,7 +29,17 @@ export function applyDisruption(snapshot, disruption) {
   return { ...snapshot, lanes, shipments };
 }
 
-export function assessImpact(snapshot, disruption, { asOf }) {
+/**
+ * @param countInbound  When false (default) cover counts ON-HAND stock only — the correct basis for
+ *   a DO_NOTHING baseline, where held shipments contribute nothing.
+ *   When true, IN_TRANSIT shipments arriving before their destination stocks out are counted.
+ *
+ *   D9-2: recovery verification originally reused the default, so a successful reroute could never
+ *   change the measured outcome — orders-at-risk read 4 before and 4 after, and the objective was
+ *   reported as missed no matter what the execution actually achieved. A verification step whose
+ *   result is independent of the action being verified is not a verification step.
+ */
+export function assessImpact(snapshot, disruption, { asOf, countInbound = false }) {
   const disrupted = applyDisruption(snapshot, disruption);
   const graph = buildGraph(disrupted);
 
@@ -54,7 +64,16 @@ export function assessImpact(snapshot, disruption, { asOf }) {
     : [];
 
   // --- BASELINE (REQ-013): what happens if we do nothing. Held shipments contribute nothing.
-  const baselineCover = computeDaysOfCover(disrupted, { asOf, inboundByFacility: new Map() });
+  // With countInbound, shipments now IN_TRANSIT (e.g. after a reroute) do count toward cover.
+  const inboundNow = new Map();
+  if (countInbound) {
+    for (const s of disrupted.shipments) {
+      if (s.status !== 'IN_TRANSIT' && s.status !== 'REROUTED') continue;
+      const key = `${s.destination_facility_id}|${s.product_id}`;
+      inboundNow.set(key, (inboundNow.get(key) ?? 0) + s.quantity_units);
+    }
+  }
+  const baselineCover = computeDaysOfCover(disrupted, { asOf, inboundByFacility: inboundNow });
   const baselineOrderRisk = ordersAtRisk(disrupted, baselineCover, { asOf });
 
   // --- COUNTERFACTUAL: what cover would have been had the disruption not happened.

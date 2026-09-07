@@ -29,7 +29,7 @@ A requirement may not be marked satisfied until all four downstream columns are 
 | REQ-021 | AR-1 | `scoring.mjs` cost + risk | `tests/core.test.mjs` risk scoring | pass | VERIFIED |
 | REQ-022 | Condition DE-1 | `constraints.mjs` checkColdChain | `tests/core.test.mjs` DE-1 ×3 | ALT_PORT INFEASIBLE 14h>12h | VERIFIED |
 | REQ-023 | Condition DE-2; ADR-0003 §2 | `constraints.mjs` checkSupplierQualification | `tests/core.test.mjs` DE-2 ×3 | ALT_SUPPLIER BLOCKED (EU) | VERIFIED |
-| REQ-024 | P1 §4 | `scoring.mjs` rankScenarios excluded[] | `tests/core.test.mjs` REQ-024 | reason mandatory | VERIFIED |
+| REQ-024 | P1 §4; REQ-024 | `scoring.mjs`; `persist.mjs` persistScenarios | `tests/pipeline.test.mjs` REQ-024 | excluded options stored with reasons | VERIFIED |
 | REQ-025 | arch §7 MCDA ranker | `scoring.mjs` DEFAULT_MCDA_WEIGHTS | `tests/core.test.mjs` REQ-025 | weights visible + breakdown | VERIFIED |
 | REQ-026 | Condition CA-2; ADR-0002 tool matrix | `scenarios.mjs` strategyIntents + `agents/index.mjs` proposeStrategies | `tests/core.test.mjs` CA-2 ×2; `tests/agents.test.mjs` CA-2 | omitting ALT_PORT removes it from the candidate set; computed figures byte-identical | VERIFIED |
 | REQ-027 | ADR-0002 §1 | PENDING | PENDING | PENDING | DESIGNED |
@@ -43,15 +43,15 @@ A requirement may not be marked satisfied until all four downstream columns are 
 | REQ-036 | ADR-0003 §4 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-037 | ADR-0003 §4 | PENDING | PENDING | PENDING | DESIGNED |
 | REQ-038 | ADR-0003 §4; AR-3 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-039 | ADR-0003 §4 | PENDING | PENDING | PENDING | DESIGNED |
+| REQ-039 | ADR-0003 §4 | `statemachine.mjs` TRANSITIONS | `tests/pipeline.test.mjs` REQ-039 | REJECTED/BLOCKED reach only SEALED | VERIFIED |
 | REQ-040 | ADR-0003 §4 | `approval` append-only triggers | `tests/seed.test.mjs` REQ-040 | pass | PARTIAL (P12) |
-| REQ-041 | ADR-0003 §2 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-050 | AR-3; ADR-0003 §4 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-051 | AR-3; DA-1 | `src/core/snapshot.mjs` computeDecisionPayloadHash | `tests/seed.test.mjs` REQ-051 | pass | VERIFIED |
-| REQ-052 | F-8; arch §7 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-053 | P1 §4 T+6m | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-054 | P1 §5 | PENDING | PENDING | PENDING | DESIGNED |
-| REQ-055 | P2 review, Domain Expert challenge | PENDING | PENDING | PENDING | DESIGNED |
+| REQ-041 | ADR-0003 §6 | `pipeline.mjs` policy_evaluation insert | `tests/pipeline.test.mjs` REQ-041 | policy_version persisted | VERIFIED |
+| REQ-050 | ADR-0003 §3 | `execution.mjs` mintAuthorization | `tests/pipeline.test.mjs` REQ-050 | mint refused unless APPROVED | VERIFIED |
+| REQ-051 | ADR-0003 §3; DA-1 | `execution.mjs` validateAuthorization | `tests/pipeline.test.mjs` REQ-051 | HASH_MISMATCH on changed input | VERIFIED |
+| REQ-052 | F-8; ADR-0005 | `execution.mjs` single-use + row versions | `tests/pipeline.test.mjs` REQ-052 ×2 | replay rejected; stale write rejected | VERIFIED |
+| REQ-053 | P1 §4 | `execution.mjs` verifyRecovery; `impact.mjs` countInbound | `tests/pipeline.test.mjs` REQ-053, D9-2 | measured against scenario prediction; 4->1 | VERIFIED |
+| REQ-054 | P1 §4 | `execution.mjs` verifyRecovery | `tests/pipeline.test.mjs` REQ-054 | RECOVERY_OBJECTIVE_MISSED audited | VERIFIED |
+| REQ-055 | Master Prompt §30 | `execution.mjs` simulated envelope; UI badge | `tests/pipeline.test.mjs` REQ-055 | carrierContacted=false recorded | VERIFIED |
 | REQ-060 | Master Prompt §6; ADR-0002 | `src/agents/index.mjs` 6 seams | `tests/agents.test.mjs` | 24 tests pass | VERIFIED |
 | REQ-061 | ADR-0002 §2 | `runtime.mjs` AGENT_TOOL_GRANTS | `tests/agents.test.mjs` REQ-061 | grants ≤3 tools, frozen | VERIFIED |
 | REQ-062 | AR-2; ADR-0002 §3 | `runtime.mjs` ScopedTools | `tests/agents.test.mjs` REQ-062 | out-of-grant call rejected | VERIFIED |
@@ -165,14 +165,16 @@ Confirms every AR from `architecture.md` §8 is testable (handoff obligation fro
   **SAP-1 remains OPEN BY DESIGN** — REQ-075 is VERIFIED in the sense that no unsupported claim
   exists and a test enforces that, but connectivity itself is unverified and is not claimed.
 
-### Status counts after P8
+### Status counts after P9
 | Status | Count |
 |---|---|
-| VERIFIED | 61 |
+| VERIFIED | 68 |
 | IMPLEMENTED | 1 |
 | PARTIAL | 1 (REQ-040, completes at P12) |
-| DESIGNED (not started) | 24 |
+| DESIGNED (not started) | 17 |
 | **Total** | **87** |
 
-- Remaining requirements are owned by P9 (end-to-end), P10 (testing), P11 (AI evaluation),
-  P12 (governance/approvals), P13+ (execution, recovery, demo).
+- **P9 update (2026-09-07):** 9 further requirements VERIFIED (**134/134 tests**). The full flow
+  runs DETECTED -> SEALED with a valid hash chain. No condition is owned by P9.
+- Remaining requirements are owned by P10 (testing), P11 (AI evaluation),
+  P12 (governance/approval capture), P13+ (audit, red team, demo).
